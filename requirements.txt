@@ -1,0 +1,15 @@
+# PyTorch - Deep Learning Framework
+# For CPU only:
+torch>=2.0.0
+# For CUDA support, install from: https://pytorch.org/get-started/locally/
+# Example: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+# Qiskit - Quantum Computing Framework
+qiskit>=0.45.0
+qiskit-aer>=0.13.0  # Simulator backend
+# Note: Visualization tools are included in the main qiskit package
+
+# Additional useful packages
+numpy>=1.24.0  # Required by both PyTorch and Qiskit
+matplotlib>=3.7.0  # For plotting (optional)
+
