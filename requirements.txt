@@ -12,4 +12,10 @@ qiskit-aer>=0.13.0  # Simulator backend
 # Additional useful packages
 numpy>=1.24.0  # Required by both PyTorch and Qiskit
 matplotlib>=3.7.0  # For plotting (optional)
+pandas>=1.5.0
+scikit-learn>=1.2.0
+
+# API Server
+flask>=2.3.0
+flask-cors>=4.0.0
 

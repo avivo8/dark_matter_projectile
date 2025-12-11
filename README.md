@@ -28,8 +28,10 @@ dark_matter_projectile/
 │   └── 4_confusion_matrix.png
 ├── website/                # Website files
 │   ├── index.html
+│   ├── interactive.html   # Interactive dark matter detection
 │   ├── styles.css
-│   └── script.js
+│   ├── script.js
+│   └── interactive.js     # Interactive feature JavaScript
 ├── docs/                   # Documentation
 │   ├── README.md (detailed)
 │   ├── WEBSITE_README.md
@@ -124,6 +126,27 @@ cd website
 python3 -m http.server 8000
 # Then visit: http://localhost:8000
 ```
+
+### 5. Interactive Dark Matter Detection
+
+Use the interactive feature to upload galaxy images and get predictions:
+
+1. Start the API server:
+```bash
+python3 src/api_server.py
+```
+
+2. In another terminal, start the web server:
+```bash
+cd website
+python3 -m http.server 8000
+```
+
+3. Open `http://localhost:8000/interactive.html` in your browser
+
+4. Upload a galaxy grid image, mark dark matter regions, and get predictions!
+
+See `docs/INTERACTIVE_GUIDE.md` for detailed instructions.
 
 ## 🔬 Methodology
 

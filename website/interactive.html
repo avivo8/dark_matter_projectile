@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Dark Matter Detection</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .interactive-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .upload-section {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .image-upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 3rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(102, 126, 234, 0.05);
+        }
+        .image-upload-area:hover {
+            border-color: var(--primary-color);
+            background: rgba(102, 126, 234, 0.1);
+        }
+        .image-upload-area.dragover {
+            border-color: var(--primary-color);
+            background: rgba(102, 126, 234, 0.2);
+        }
+        #fileInput {
+            display: none;
+        }
+        .canvas-container {
+            position: relative;
+            margin: 2rem 0;
+            background: var(--darker-bg);
+            border-radius: 15px;
+            padding: 1rem;
+            display: none;
+        }
+        #imageCanvas {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            cursor: crosshair;
+        }
+        .controls-panel {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        .control-group {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .control-group label {
+            min-width: 150px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .btn-mode {
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            background: transparent;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        .btn-mode.active {
+            background: var(--gradient-1);
+            border-color: var(--primary-color);
+        }
+        .btn-mode:hover {
+            border-color: var(--primary-color);
+        }
+        .results-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        .result-card {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .result-card h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+        #predictionCanvas {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+        }
+        .galaxy-marker {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid white;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        .marker-dark-matter {
+            background: rgba(255, 0, 0, 0.7);
+            border-color: darkred;
+        }
+        .marker-background {
+            background: rgba(0, 0, 255, 0.7);
+            border-color: darkblue;
+        }
+        .marker-predicted {
+            background: rgba(255, 255, 0, 0.7);
+            border-color: yellow;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .stat-item {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        .instructions {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            border-left: 4px solid var(--primary-color);
+        }
+        .instructions h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+        .instructions ol {
+            color: var(--text-secondary);
+            line-height: 2;
+            padding-left: 1.5rem;
+        }
+        .instructions li {
+            margin-bottom: 0.5rem;
+        }
+        @media (max-width: 768px) {
+            .results-section {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <span class="logo-icon">🌌</span>
+                <span class="logo-text">Dark Matter Projectile</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="index.html#visualizations">Visualizations</a></li>
+                <li><a href="interactive.html" class="active">Interactive</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <section class="section" style="padding-top: 120px;">
+        <div class="interactive-container">
+            <h1 class="section-title">Interactive Dark Matter Detection</h1>
+            <p class="section-description">
+                Upload an image of a galaxy grid, mark regions with dark matter, and let our quantum ML model predict dark matter locations.
+            </p>
+
+            <!-- Instructions -->
+            <div class="instructions">
+                <h3>How to Use:</h3>
+                <ol>
+                    <li><strong>Upload Image:</strong> Click the upload area or drag and drop a galaxy grid image</li>
+                    <li><strong>Mark Dark Matter:</strong> Click on galaxies where you believe dark matter is present (red markers)</li>
+                    <li><strong>Mark Background:</strong> Click on galaxies that are background/no dark matter (blue markers)</li>
+                    <li><strong>Generate Grid:</strong> Click "Generate Galaxy Grid" to create a synthetic grid from your image</li>
+                    <li><strong>Predict:</strong> Click "Run Prediction" to let the quantum ML model predict dark matter locations</li>
+                </ol>
+            </div>
+
+            <!-- Upload Section -->
+            <div class="upload-section">
+                <div class="image-upload-area" id="uploadArea">
+                    <input type="file" id="fileInput" accept="image/*">
+                    <div>
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">📸</div>
+                        <h3 style="color: var(--text-primary); margin-bottom: 0.5rem;">Upload Galaxy Grid Image</h3>
+                        <p style="color: var(--text-secondary);">Click here or drag and drop an image file</p>
+                    </div>
+                </div>
+
+                <div class="canvas-container" id="canvasContainer">
+                    <canvas id="imageCanvas"></canvas>
+                </div>
+
+                <div class="controls-panel" id="controlsPanel">
+                    <div class="control-group">
+                        <label>Mode:</label>
+                        <div class="btn-group">
+                            <button class="btn-mode active" data-mode="dark-matter">Mark Dark Matter</button>
+                            <button class="btn-mode" data-mode="background">Mark Background</button>
+                            <button class="btn-mode" data-mode="clear">Clear Markers</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>Actions:</label>
+                        <div class="btn-group">
+                            <button class="btn btn-primary" id="generateGridBtn">Generate Galaxy Grid</button>
+                            <button class="btn btn-primary" id="predictBtn">Run Prediction</button>
+                            <button class="btn btn-secondary" id="resetBtn">Reset</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results-section" id="resultsSection" style="display: none;">
+                <div class="result-card">
+                    <h3>Your Markings (Ground Truth)</h3>
+                    <canvas id="groundTruthCanvas"></canvas>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value" id="darkMatterCount">0</div>
+                            <div class="stat-label">Dark Matter Regions</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="backgroundCount">0</div>
+                            <div class="stat-label">Background Regions</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="result-card">
+                    <h3>Model Predictions</h3>
+                    <canvas id="predictionCanvas"></canvas>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value" id="predictedDarkMatter">0</div>
+                            <div class="stat-label">Predicted Dark Matter</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="accuracy">-</div>
+                            <div class="stat-label">Accuracy</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="script.js"></script>
+    <script src="interactive.js"></script>
+</body>
+</html>
+
