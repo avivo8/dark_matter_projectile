@@ -23,6 +23,13 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
 });
 
+// Example images - using canvas-generated galaxy fields
+const exampleImages = {
+    example1: null, // Will be generated
+    example2: null,
+    example3: null
+};
+
 function setupEventListeners() {
     const uploadArea = document.getElementById('uploadArea');
     const fileInput = document.getElementById('fileInput');
@@ -30,6 +37,25 @@ function setupEventListeners() {
     const generateGridBtn = document.getElementById('generateGridBtn');
     const predictBtn = document.getElementById('predictBtn');
     const resetBtn = document.getElementById('resetBtn');
+    const exampleCards = document.querySelectorAll('.example-image-card');
+
+    // Example image selection
+    exampleCards.forEach(card => {
+        card.addEventListener('click', () => {
+            const imageType = card.dataset.image;
+            exampleCards.forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            
+            if (imageType === 'upload') {
+                document.getElementById('exampleImagesGrid').style.display = 'none';
+                uploadArea.style.display = 'block';
+            } else {
+                uploadArea.style.display = 'none';
+                document.getElementById('exampleImagesGrid').style.display = 'grid';
+                loadExampleImage(imageType);
+            }
+        });
+    });
 
     // File upload
     uploadArea.addEventListener('click', () => fileInput.click());
@@ -415,6 +441,115 @@ function calculateAccuracy() {
     return correct / galaxyData.length;
 }
 
+function loadExampleImage(type) {
+    // Generate a synthetic galaxy field image on canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = 1200;
+    canvas.height = 800;
+    const ctx = canvas.getContext('2d');
+    
+    // Create dark space background
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    gradient.addColorStop(0, '#0a0a0f');
+    gradient.addColorStop(0.5, '#1a1a2e');
+    gradient.addColorStop(1, '#16213e');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Add stars
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    for (let i = 0; i < 200; i++) {
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * canvas.height;
+        const size = Math.random() * 2;
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    // Add galaxies - different patterns for each example
+    const numGalaxies = type === 'example1' ? 30 : type === 'example2' ? 40 : 35;
+    const galaxies = [];
+    
+    for (let i = 0; i < numGalaxies; i++) {
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * canvas.height;
+        const size = 10 + Math.random() * 25;
+        const brightness = 0.3 + Math.random() * 0.7;
+        const isDistorted = Math.random() > (type === 'example1' ? 0.6 : type === 'example2' ? 0.5 : 0.55);
+        
+        galaxies.push({x, y, size, brightness, isDistorted});
+        
+        // Draw galaxy
+        const galaxyGradient = ctx.createRadialGradient(x, y, 0, x, y, size);
+        galaxyGradient.addColorStop(0, `rgba(255, 255, 255, ${brightness})`);
+        galaxyGradient.addColorStop(0.5, `rgba(200, 200, 255, ${brightness * 0.5})`);
+        galaxyGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        
+        ctx.fillStyle = galaxyGradient;
+        
+        // Draw elliptical galaxy (distorted if dark matter present)
+        ctx.save();
+        ctx.translate(x, y);
+        if (isDistorted) {
+            // Distorted ellipse (gravitational lensing effect)
+            ctx.scale(1.3, 0.7);
+            ctx.rotate(Math.random() * Math.PI / 4);
+        } else {
+            // Normal ellipse
+            ctx.scale(1, 0.8);
+            ctx.rotate(Math.random() * Math.PI);
+        }
+        ctx.beginPath();
+        ctx.ellipse(0, 0, size, size * 0.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        
+        // Add core
+        ctx.fillStyle = `rgba(255, 255, 200, ${brightness})`;
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    // Convert canvas to image and load it
+    canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => {
+            // Set canvas size
+            const maxWidth = 1200;
+            const maxHeight = 800;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxWidth) {
+                height = (height * maxWidth) / width;
+                width = maxWidth;
+            }
+            if (height > maxHeight) {
+                width = (width * maxHeight) / height;
+                height = maxHeight;
+            }
+
+            imageCanvas.width = width;
+            imageCanvas.height = height;
+            imageCtx.drawImage(img, 0, 0, width, height);
+
+            // Show canvas and controls
+            document.getElementById('canvasContainer').style.display = 'block';
+            document.getElementById('controlsPanel').style.display = 'block';
+            document.getElementById('exampleImagesGrid').style.display = 'none';
+            
+            // Store galaxy positions for reference (optional - for better feature extraction)
+            window.exampleGalaxies = galaxies;
+            
+            URL.revokeObjectURL(url);
+        };
+        img.src = url;
+    });
+}
+
 function resetAll() {
     markers = [];
     galaxyData = [];
@@ -422,7 +557,9 @@ function resetAll() {
     document.getElementById('resultsSection').style.display = 'none';
     document.getElementById('canvasContainer').style.display = 'none';
     document.getElementById('controlsPanel').style.display = 'none';
-    document.getElementById('uploadArea').style.display = 'block';
+    document.getElementById('uploadArea').style.display = 'none';
+    document.getElementById('exampleImagesGrid').style.display = 'grid';
+    document.querySelectorAll('.example-image-card').forEach(c => c.classList.remove('selected'));
     imageFile = null;
     updateStats();
 }
