@@ -214,46 +214,46 @@
         <div class="container">
             <h2 class="section-title">Visualizations</h2>
             <p class="section-description">
-                Our model generates comprehensive visualizations showing dark matter distribution, prediction accuracy, and spatial maps.
+                Our model generates comprehensive visualizations showing dark matter distribution, prediction accuracy, and model performance metrics.
             </p>
-            <div class="visualization-container">
-                <div class="viz-card">
-                    <h3>Model Predictions</h3>
-                    <p>Probability heatmap showing where dark matter is detected based on galaxy ellipticity patterns.</p>
+            <div class="visualizations-grid">
+                <div class="viz-card-large">
+                    <h3>1. Model Predictions</h3>
+                    <p>Probability heatmap showing where dark matter is detected based on galaxy ellipticity patterns. The color gradient represents the probability of dark matter presence.</p>
                     <div class="viz-image">
-                        <img src="dark_matter_visualization.png" alt="Dark Matter Visualization" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <img src="../visualizations/1_model_predictions.png" alt="Model Predictions - Probability Heatmap" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                         <div class="placeholder-image" style="display:none;">
                             <div class="placeholder-content">📊<br>Run visualize_dark_matter.py<br>to generate visualization</div>
                         </div>
                     </div>
                 </div>
-                <div class="viz-features">
-                    <div class="feature-item">
-                        <span class="feature-icon">🎯</span>
-                        <div>
-                            <h4>Probability Heatmaps</h4>
-                            <p>Color-coded maps showing dark matter probability across the feature space</p>
+                <div class="viz-card-large">
+                    <h3>2. Ground Truth Labels</h3>
+                    <p>Actual dark matter distribution based on gravitational shear measurements. This represents the true labels used for training and validation.</p>
+                    <div class="viz-image">
+                        <img src="../visualizations/2_ground_truth_labels.png" alt="Ground Truth Labels" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <div class="placeholder-image" style="display:none;">
+                            <div class="placeholder-content">📊<br>Run visualize_dark_matter.py<br>to generate visualization</div>
                         </div>
                     </div>
-                    <div class="feature-item">
-                        <span class="feature-icon">🗺️</span>
-                        <div>
-                            <h4>Spatial Maps</h4>
-                            <p>2D spatial coordinates showing prediction accuracy and ground truth comparisons</p>
+                </div>
+                <div class="viz-card-large">
+                    <h3>3. Prediction Accuracy</h3>
+                    <p>Visual comparison showing correct predictions (green) versus incorrect predictions (red) in the feature space. Demonstrates model performance across different ellipticity values.</p>
+                    <div class="viz-image">
+                        <img src="../visualizations/3_prediction_accuracy.png" alt="Prediction Accuracy" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <div class="placeholder-image" style="display:none;">
+                            <div class="placeholder-content">📊<br>Run visualize_dark_matter.py<br>to generate visualization</div>
                         </div>
                     </div>
-                    <div class="feature-item">
-                        <span class="feature-icon">📈</span>
-                        <div>
-                            <h4>Confusion Matrix</h4>
-                            <p>Detailed analysis of true positives, false positives, and classification accuracy</p>
-                        </div>
-                    </div>
-                    <div class="feature-item">
-                        <span class="feature-icon">✅</span>
-                        <div>
-                            <h4>Accuracy Visualization</h4>
-                            <p>Visual comparison of correct vs incorrect predictions in feature space</p>
+                </div>
+                <div class="viz-card-large">
+                    <h3>4. Confusion Matrix</h3>
+                    <p>Comprehensive performance summary showing True Positives (TP), True Negatives (TN), False Positives (FP), and False Negatives (FN) with percentages. This matrix provides detailed insight into model classification accuracy.</p>
+                    <div class="viz-image">
+                        <img src="../visualizations/4_confusion_matrix.png" alt="Confusion Matrix" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <div class="placeholder-image" style="display:none;">
+                            <div class="placeholder-content">📊<br>Run visualize_dark_matter.py<br>to generate visualization</div>
                         </div>
                     </div>
                 </div>
@@ -291,8 +291,9 @@
                 <h3>Key Findings</h3>
                 <ul>
                     <li>The quantum model successfully identifies dark matter halos through gravitational lensing signatures</li>
-                    <li>Spatial visualizations show clear separation between dark matter regions and background galaxies</li>
+                    <li>Feature space visualizations show clear separation between dark matter regions and background galaxies</li>
                     <li>The model achieves high accuracy while using quantum computing principles for classification</li>
+                    <li>Confusion matrix analysis reveals detailed performance metrics including true positives, false positives, and classification accuracy</li>
                     <li>This approach demonstrates the potential of quantum machine learning for astrophysical applications</li>
                 </ul>
             </div>

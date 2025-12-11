@@ -6,45 +6,13 @@ A quantum machine learning project that uses a Variational Quantum Classifier (V
 
 This project demonstrates how quantum machine learning can be applied to astrophysical problems, specifically the detection of dark matter through weak gravitational lensing. Dark matter halos cause gravitational shear, which distorts the shapes of background galaxies. By analyzing these distortions (measured as ellipticity), we can identify regions with dark matter concentrations.
 
-## 📁 Project Structure
-
-```
-dark_matter_projectile/
-├── src/                    # Python source code
-│   ├── generate_dark_matter_dataset.py
-│   ├── train_model.py
-│   ├── visualize_dark_matter.py
-│   └── setup_environment.py
-├── data/                   # Data files
-│   └── dark_matter_dataset.csv
-├── models/                 # Trained models and scalers
-│   ├── vqc_model.pkl
-│   ├── vqc_model_config.pkl
-│   └── scaler.pkl
-├── visualizations/         # Generated visualization images
-│   ├── 1_model_predictions.png
-│   ├── 2_ground_truth_labels.png
-│   ├── 3_prediction_accuracy.png
-│   └── 4_confusion_matrix.png
-├── website/                # Website files
-│   ├── index.html
-│   ├── styles.css
-│   └── script.js
-├── docs/                   # Documentation
-│   ├── README.md (detailed)
-│   ├── WEBSITE_README.md
-│   └── PUSH_TO_GITHUB.md
-├── requirements.txt        # Python dependencies
-└── README.md              # This file
-```
-
 ## ✨ Features
 
 - **Quantum Machine Learning**: Uses Qiskit's Variational Quantum Classifier (VQC) for classification
 - **Synthetic Data Generation**: Generates realistic galaxy ellipticity datasets with known dark matter labels
 - **Spatial Visualization**: Creates 2D spatial maps showing dark matter distribution and prediction accuracy
 - **Performance Analysis**: Comprehensive visualization comparing model predictions with ground truth
-- **Modern Website**: Beautiful, responsive website showcasing the project
+- **PyTorch Integration**: Environment setup includes PyTorch for potential hybrid classical-quantum approaches
 
 ## 📋 Requirements
 
@@ -58,8 +26,8 @@ dark_matter_projectile/
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/avivo8/dark_matter_projectile.git
-cd dark_matter_projectile
+git clone https://github.com/yourusername/dark_energy_density_proj.git
+cd dark_energy_density_proj
 ```
 
 2. Install dependencies:
@@ -69,7 +37,7 @@ pip install -r requirements.txt
 
 3. Verify the environment:
 ```bash
-python3 src/setup_environment.py
+python3 setup_environment.py
 ```
 
 ## 📖 Usage
@@ -79,10 +47,10 @@ python3 src/setup_environment.py
 Generate a labeled dataset of galaxy ellipticity measurements:
 
 ```bash
-python3 src/generate_dark_matter_dataset.py
+python3 generate_dark_matter_dataset.py
 ```
 
-This creates `data/dark_matter_dataset.csv` with:
+This creates `dark_matter_dataset.csv` with:
 - `Observed_Eps1`, `Observed_Eps2`: Observed ellipticity components
 - `Total_Shear_Gamma`: Total gravitational shear magnitude
 - `Label`: Binary label (1 = Dark Matter present, 0 = Background)
@@ -92,13 +60,13 @@ This creates `data/dark_matter_dataset.csv` with:
 Train the Variational Quantum Classifier:
 
 ```bash
-python3 src/train_model.py
+python3 train_model.py
 ```
 
 This will:
 - Load and preprocess the dataset
 - Train a VQC model with ZZFeatureMap and RealAmplitudes ansatz
-- Save the trained model and scaler to `models/` directory
+- Save the trained model and scaler for later use
 - Display training accuracy
 
 ### 3. Visualize Results
@@ -106,23 +74,28 @@ This will:
 Generate comprehensive visualizations:
 
 ```bash
-python3 src/visualize_dark_matter.py
+python3 visualize_dark_matter.py
 ```
 
-This creates visualization images in `visualizations/` directory:
+This creates:
 - **Probability heatmaps** showing dark matter concentration
+- **Spatial maps** with x-y coordinates showing prediction accuracy
 - **Ground truth comparisons** 
 - **Confusion matrix** analysis
-- **Prediction accuracy** visualizations
 
-### 4. View Website
+The visualization is saved as `dark_matter_visualization.png`.
 
-Open `website/index.html` in your browser or use a local server:
+## 📊 Project Structure
 
-```bash
-cd website
-python3 -m http.server 8000
-# Then visit: http://localhost:8000
+```
+dark_energy_density_proj/
+├── generate_dark_matter_dataset.py  # Dataset generation script
+├── train_model.py                    # VQC training script
+├── visualize_dark_matter.py          # Visualization script
+├── setup_environment.py               # Environment verification
+├── requirements.txt                  # Python dependencies
+├── README.md                         # This file
+└── dark_matter_dataset.csv            # Generated dataset (after running generator)
 ```
 
 ## 🔬 Methodology
@@ -158,12 +131,14 @@ The model typically achieves:
 
 ## 🎯 Visualizations
 
-The visualization script generates separate figure files:
+The visualization script generates a 2×3 grid showing:
 
 1. **Model Predictions** (Probability Heatmap)
 2. **Ground Truth Labels** (Actual Dark Matter)
 3. **Confusion Matrix**
 4. **Prediction Accuracy** (Feature Space)
+5. **Spatial Map: Prediction Accuracy** (NEW - x-y coordinates)
+6. **Spatial Map: Ground Truth vs Predictions** (NEW - overlay comparison)
 
 ## 🔧 Configuration
 
@@ -188,10 +163,6 @@ This project is open source and available under the MIT License.
 - Astrophysics community for gravitational lensing theory
 - Quantum machine learning research community
 
-## 👤 Author
-
-**Aviv Solan**
-
 ## 📧 Contact
 
 For questions or suggestions, please open an issue on GitHub.
@@ -199,4 +170,5 @@ For questions or suggestions, please open an issue on GitHub.
 ---
 
 **Note**: This is a research/educational project demonstrating quantum machine learning applications in astrophysics. For production use, additional validation and optimization would be required.
+
 

@@ -74,7 +74,10 @@ df = pd.DataFrame({
     'Label': labels
 })
 
-df.to_csv('dark_matter_dataset.csv', index=False)
+import os
+# Get the project root directory (parent of src)
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+df.to_csv(os.path.join(project_root, 'data', 'dark_matter_dataset.csv'), index=False)
 
 # Print first 5 rows
 print("Dataset for Dark Matter Halo Detection (VQC Training)")

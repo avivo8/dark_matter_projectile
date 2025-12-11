@@ -7,7 +7,10 @@ from qiskit_machine_learning.optimizers import COBYLA
 from qiskit.circuit.library import ZZFeatureMap, RealAmplitudes
 from qiskit.primitives import Sampler
 
-df = pd.read_csv('/home/aviv/Documents/dark_energy_density_proj/dark_matter_dataset.csv')
+import os
+# Get the project root directory (parent of src)
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+df = pd.read_csv(os.path.join(project_root, 'data', 'dark_matter_dataset.csv'))
 # 1. הפרדת פיצ'רים ותווית
 X = df[['Observed_Eps1', 'Observed_Eps2']].values
 Y = df['Label'].values
@@ -67,9 +70,11 @@ print(f"כמות דגימות האימון: {len(X_train_small)}")
 # Save the model, scaler, and configuration for later use
 import pickle
 
+models_dir = os.path.join(project_root, 'models')
+
 # Save the entire model using pickle
 try:
-    with open('vqc_model.pkl', 'wb') as f:
+    with open(os.path.join(models_dir, 'vqc_model.pkl'), 'wb') as f:
         pickle.dump(vqc_model, f)
     print("Full model saved successfully!")
 except Exception as e:
@@ -83,7 +88,7 @@ except Exception as e:
         print("Could not extract weights")
 
 # Save scaler
-with open('scaler.pkl', 'wb') as f:
+with open(os.path.join(models_dir, 'scaler.pkl'), 'wb') as f:
     pickle.dump(scaler, f)
 
 # Save model configuration with weights
@@ -93,7 +98,7 @@ model_config = {
     'reps_ansatz': reps_ansatz,
     'weights': weights if 'weights' in locals() else None
 }
-with open('vqc_model_config.pkl', 'wb') as f:
+with open(os.path.join(models_dir, 'vqc_model_config.pkl'), 'wb') as f:
     pickle.dump(model_config, f)
 
 print("Scaler and model configuration saved successfully!")

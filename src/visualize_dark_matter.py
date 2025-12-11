@@ -9,11 +9,18 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import pickle
 import time
+import os
 from sklearn.preprocessing import MinMaxScaler
 from qiskit_machine_learning.algorithms import VQC
 from qiskit_machine_learning.optimizers import COBYLA
 from qiskit.circuit.library import ZZFeatureMap, RealAmplitudes
 from qiskit.primitives import Sampler
+
+# Get the project root directory (parent of src)
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+models_dir = os.path.join(project_root, 'models')
+data_dir = os.path.join(project_root, 'data')
+visualizations_dir = os.path.join(project_root, 'visualizations')
 
 # Load the saved model and scaler
 print("Loading model and scaler...")
@@ -23,7 +30,7 @@ model_config = None
 
 # Load scaler first (needed for retraining if model not found)
 try:
-    with open('scaler.pkl', 'rb') as f:
+    with open(os.path.join(models_dir, 'scaler.pkl'), 'rb') as f:
         scaler = pickle.load(f)
     print("Scaler loaded successfully!")
 except FileNotFoundError:
@@ -32,7 +39,7 @@ except FileNotFoundError:
 
 # Try to load the full model first
 try:
-    with open('vqc_model.pkl', 'rb') as f:
+    with open(os.path.join(models_dir, 'vqc_model.pkl'), 'rb') as f:
         data = f.read()
         if len(data) > 0:
             vqc_model = pickle.loads(data)
@@ -42,7 +49,7 @@ try:
 except (FileNotFoundError, ValueError, EOFError):
     print("Full model file not found or empty. Trying to reconstruct from configuration...")
     try:
-        with open('vqc_model_config.pkl', 'rb') as f:
+        with open(os.path.join(models_dir, 'vqc_model_config.pkl'), 'rb') as f:
             data = f.read()
             if len(data) > 0:
                 model_config = pickle.loads(data)
@@ -86,7 +93,7 @@ except (FileNotFoundError, ValueError, EOFError):
             except:
                 print("Could not set weights directly. Will retrain quickly...")
                 # Load training data and retrain quickly
-                df_train = pd.read_csv('/home/aviv/Documents/dark_energy_density_proj/dark_matter_dataset.csv')
+                df_train = pd.read_csv(os.path.join(data_dir, 'dark_matter_dataset.csv'))
                 X_train = df_train[['Observed_Eps1', 'Observed_Eps2']].values[:100]
                 Y_train = df_train['Label'].values[:100]
                 X_train_scaled = scaler.transform(X_train)
@@ -96,7 +103,7 @@ except (FileNotFoundError, ValueError, EOFError):
         else:
             print("No weights found. Retraining model quickly for visualization...")
             # Load training data and retrain quickly
-            df_train = pd.read_csv('/home/aviv/Documents/dark_energy_density_proj/dark_matter_dataset.csv')
+            df_train = pd.read_csv('dark_matter_dataset.csv')
             X_train = df_train[['Observed_Eps1', 'Observed_Eps2']].values[:100]
             Y_train = df_train['Label'].values[:100]
             X_train_scaled = scaler.transform(X_train)
@@ -106,13 +113,15 @@ except (FileNotFoundError, ValueError, EOFError):
     except (FileNotFoundError, ValueError, EOFError) as e:
         print(f"Config file issue: {e}. Will reconstruct model and retrain...")
         model_config = None
+        vqc_model = None
 except Exception as e:
     print(f"Error loading model: {e}")
     print("Will reconstruct model and retrain...")
     model_config = None
+    vqc_model = None
 
 # If we don't have a model yet, reconstruct it
-if vqc_model is None:
+if vqc_model is None or not hasattr(vqc_model, 'neural_network') or not hasattr(vqc_model.neural_network, 'weights'):
     if model_config is None:
         # Default configuration
         model_config = {'num_qubits': 2, 'reps_feature': 2, 'reps_ansatz': 3}
@@ -153,7 +162,7 @@ if vqc_model is None:
         except:
             print("Could not set weights. Will retrain...")
             # Load training data and retrain
-            df_train = pd.read_csv('/home/aviv/Documents/dark_energy_density_proj/dark_matter_dataset.csv')
+            df_train = pd.read_csv('dark_matter_dataset.csv')
             X_train = df_train[['Observed_Eps1', 'Observed_Eps2']].values[:100]
             Y_train = df_train['Label'].values[:100]
             X_train_scaled = scaler.transform(X_train)
@@ -163,7 +172,7 @@ if vqc_model is None:
     else:
         print("No weights found. Retraining model for visualization...")
         # Load training data and retrain
-        df_train = pd.read_csv('/home/aviv/Documents/dark_energy_density_proj/dark_matter_dataset.csv')
+        df_train = pd.read_csv('dark_matter_dataset.csv')
         X_train = df_train[['Observed_Eps1', 'Observed_Eps2']].values[:100]
         Y_train = df_train['Label'].values[:100]
         X_train_scaled = scaler.transform(X_train)
@@ -284,155 +293,133 @@ grid_probabilities = vqc_model.predict_proba(grid_scaled)
 dark_matter_prob_grid = grid_probabilities[:, 1].reshape(Eps1_mesh.shape)
 dark_matter_label_grid = grid_predictions.reshape(Eps1_mesh.shape)
 
-# Create the visualization with ground truth comparison
-print("Creating visualization figure...")
-fig, axes = plt.subplots(2, 3, figsize=(20, 14))
-
-# Plot 1: Probability heatmap with predictions
-im1 = axes[0, 0].contourf(Eps1_mesh, Eps2_mesh, dark_matter_prob_grid, 
-                       levels=20, cmap='RdYlBu_r', alpha=0.8)
-axes[0, 0].scatter(new_data[new_data['Predicted_Label'] == 1]['Observed_Eps1'],
-                new_data[new_data['Predicted_Label'] == 1]['Observed_Eps2'],
-                c='red', s=30, alpha=0.6, label='Predicted: Dark Matter', edgecolors='black', linewidths=0.5)
-axes[0, 0].scatter(new_data[new_data['Predicted_Label'] == 0]['Observed_Eps1'],
-                new_data[new_data['Predicted_Label'] == 0]['Observed_Eps2'],
-                c='blue', s=30, alpha=0.6, label='Predicted: Background', edgecolors='black', linewidths=0.5)
-axes[0, 0].set_xlabel('Observed Epsilon 1', fontsize=12, fontweight='bold')
-axes[0, 0].set_ylabel('Observed Epsilon 2', fontsize=12, fontweight='bold')
-axes[0, 0].set_title('Model Predictions\n(Probability Heatmap)', fontsize=14, fontweight='bold')
-axes[0, 0].legend(loc='upper right')
-axes[0, 0].grid(True, alpha=0.3)
-plt.colorbar(im1, ax=axes[0, 0], label='Dark Matter Probability')
-
-# Plot 2: Ground truth labels
-im2 = axes[0, 1].contourf(Eps1_mesh, Eps2_mesh, dark_matter_prob_grid, 
-                       levels=20, cmap='RdYlBu_r', alpha=0.3)
-axes[0, 1].scatter(new_data[new_data['Ground_Truth_Label'] == 1]['Observed_Eps1'],
-                new_data[new_data['Ground_Truth_Label'] == 1]['Observed_Eps2'],
-                c='darkred', s=50, alpha=0.8, label='Ground Truth: Dark Matter', 
-                edgecolors='black', linewidths=1.5, marker='s')
-axes[0, 1].scatter(new_data[new_data['Ground_Truth_Label'] == 0]['Observed_Eps1'],
-                new_data[new_data['Ground_Truth_Label'] == 0]['Observed_Eps2'],
-                c='darkblue', s=50, alpha=0.8, label='Ground Truth: Background', 
-                edgecolors='black', linewidths=1.5, marker='s')
-axes[0, 1].set_xlabel('Observed Epsilon 1', fontsize=12, fontweight='bold')
-axes[0, 1].set_ylabel('Observed Epsilon 2', fontsize=12, fontweight='bold')
-axes[0, 1].set_title('Ground Truth Labels\n(Actual Dark Matter Presence)', fontsize=14, fontweight='bold')
-axes[0, 1].legend(loc='upper right')
-axes[0, 1].grid(True, alpha=0.3)
-
-# Plot 3: Comparison - Correct vs Incorrect predictions
+# Create separate figures for each visualization
+print("Creating visualization figures...")
 correct = new_data['Predicted_Label'] == new_data['Ground_Truth_Label']
 incorrect = ~correct
 
-axes[1, 0].contourf(Eps1_mesh, Eps2_mesh, dark_matter_label_grid, 
-                    levels=[-0.5, 0.5, 1.5], colors=['#4A90E2', '#E74C3C'], alpha=0.3)
+# Figure 1: Model Predictions (Probability Heatmap)
+print("Creating Figure 1: Model Predictions...")
+fig1, ax1 = plt.subplots(figsize=(10, 8))
+im1 = ax1.contourf(Eps1_mesh, Eps2_mesh, dark_matter_prob_grid, 
+                   levels=20, cmap='RdYlBu_r', alpha=0.8)
+ax1.scatter(new_data[new_data['Predicted_Label'] == 1]['Observed_Eps1'],
+            new_data[new_data['Predicted_Label'] == 1]['Observed_Eps2'],
+            c='red', s=30, alpha=0.6, label='Predicted: Dark Matter', edgecolors='black', linewidths=0.5)
+ax1.scatter(new_data[new_data['Predicted_Label'] == 0]['Observed_Eps1'],
+            new_data[new_data['Predicted_Label'] == 0]['Observed_Eps2'],
+            c='blue', s=30, alpha=0.6, label='Predicted: Background', edgecolors='black', linewidths=0.5)
+ax1.set_xlabel('Observed Epsilon 1', fontsize=12, fontweight='bold')
+ax1.set_ylabel('Observed Epsilon 2', fontsize=12, fontweight='bold')
+ax1.set_title('Model Predictions\n(Probability Heatmap)', fontsize=14, fontweight='bold')
+ax1.legend(loc='upper right')
+ax1.grid(True, alpha=0.3)
+plt.colorbar(im1, ax=ax1, label='Dark Matter Probability')
+plt.tight_layout()
+plt.savefig(os.path.join(visualizations_dir, '1_model_predictions.png'), dpi=300, bbox_inches='tight')
+plt.close()
+print("  Saved: 1_model_predictions.png")
+
+# Figure 2: Ground Truth Labels
+print("Creating Figure 2: Ground Truth Labels...")
+fig2, ax2 = plt.subplots(figsize=(10, 8))
+im2 = ax2.contourf(Eps1_mesh, Eps2_mesh, dark_matter_prob_grid, 
+                   levels=20, cmap='RdYlBu_r', alpha=0.3)
+ax2.scatter(new_data[new_data['Ground_Truth_Label'] == 1]['Observed_Eps1'],
+            new_data[new_data['Ground_Truth_Label'] == 1]['Observed_Eps2'],
+            c='darkred', s=50, alpha=0.8, label='Ground Truth: Dark Matter', 
+            edgecolors='black', linewidths=1.5, marker='s')
+ax2.scatter(new_data[new_data['Ground_Truth_Label'] == 0]['Observed_Eps1'],
+            new_data[new_data['Ground_Truth_Label'] == 0]['Observed_Eps2'],
+            c='darkblue', s=50, alpha=0.8, label='Ground Truth: Background', 
+            edgecolors='black', linewidths=1.5, marker='s')
+ax2.set_xlabel('Observed Epsilon 1', fontsize=12, fontweight='bold')
+ax2.set_ylabel('Observed Epsilon 2', fontsize=12, fontweight='bold')
+ax2.set_title('Ground Truth Labels\n(Actual Dark Matter Presence)', fontsize=14, fontweight='bold')
+ax2.legend(loc='upper right')
+ax2.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.savefig(os.path.join(visualizations_dir, '2_ground_truth_labels.png'), dpi=300, bbox_inches='tight')
+plt.close()
+print("  Saved: 2_ground_truth_labels.png")
+
+# Figure 3: Prediction Accuracy (Correct vs Incorrect)
+print("Creating Figure 3: Prediction Accuracy...")
+fig3, ax3 = plt.subplots(figsize=(10, 8))
+ax3.contourf(Eps1_mesh, Eps2_mesh, dark_matter_label_grid, 
+            levels=[-0.5, 0.5, 1.5], colors=['#4A90E2', '#E74C3C'], alpha=0.3)
 # Correct predictions
-axes[1, 0].scatter(new_data[correct & (new_data['Predicted_Label'] == 1)]['Observed_Eps1'],
-                new_data[correct & (new_data['Predicted_Label'] == 1)]['Observed_Eps2'],
-                c='green', s=60, alpha=0.8, marker='o', 
-                edgecolors='darkgreen', linewidths=2, label='Correct: Dark Matter')
-axes[1, 0].scatter(new_data[correct & (new_data['Predicted_Label'] == 0)]['Observed_Eps1'],
-                new_data[correct & (new_data['Predicted_Label'] == 0)]['Observed_Eps2'],
-                c='lightgreen', s=60, alpha=0.8, marker='o', 
-                edgecolors='darkgreen', linewidths=2, label='Correct: Background')
+ax3.scatter(new_data[correct & (new_data['Predicted_Label'] == 1)]['Observed_Eps1'],
+            new_data[correct & (new_data['Predicted_Label'] == 1)]['Observed_Eps2'],
+            c='green', s=60, alpha=0.8, marker='o', 
+            edgecolors='darkgreen', linewidths=2, label='Correct: Dark Matter')
+ax3.scatter(new_data[correct & (new_data['Predicted_Label'] == 0)]['Observed_Eps1'],
+            new_data[correct & (new_data['Predicted_Label'] == 0)]['Observed_Eps2'],
+            c='lightgreen', s=60, alpha=0.8, marker='o', 
+            edgecolors='darkgreen', linewidths=2, label='Correct: Background')
 # Incorrect predictions
-axes[1, 0].scatter(new_data[incorrect]['Observed_Eps1'],
-                new_data[incorrect]['Observed_Eps2'],
-                c='red', s=80, alpha=0.9, marker='X', 
-                edgecolors='darkred', linewidths=2, label='Incorrect Predictions')
-axes[1, 0].set_xlabel('Observed Epsilon 1', fontsize=12, fontweight='bold')
-axes[1, 0].set_ylabel('Observed Epsilon 2', fontsize=12, fontweight='bold')
-axes[1, 0].set_title(f'Prediction Accuracy\n(Green=Correct, Red=Incorrect, Accuracy={accuracy*100:.1f}%)', 
-                     fontsize=14, fontweight='bold')
-axes[1, 0].legend(loc='upper right')
-axes[1, 0].grid(True, alpha=0.3)
+ax3.scatter(new_data[incorrect]['Observed_Eps1'],
+            new_data[incorrect]['Observed_Eps2'],
+            c='red', s=80, alpha=0.9, marker='X', 
+            edgecolors='darkred', linewidths=2, label='Incorrect Predictions')
+ax3.set_xlabel('Observed Epsilon 1', fontsize=12, fontweight='bold')
+ax3.set_ylabel('Observed Epsilon 2', fontsize=12, fontweight='bold')
+ax3.set_title(f'Prediction Accuracy\n(Green=Correct, Red=Incorrect, Accuracy={accuracy*100:.1f}%)', 
+             fontsize=14, fontweight='bold')
+ax3.legend(loc='upper right')
+ax3.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.savefig(os.path.join(visualizations_dir, '3_prediction_accuracy.png'), dpi=300, bbox_inches='tight')
+plt.close()
+print("  Saved: 3_prediction_accuracy.png")
 
-# Plot 4: Spatial Map - Prediction Accuracy
-# (correct and incorrect already defined above)
-
-# Correct predictions - green circles
-axes[1, 1].scatter(new_data[correct]['Spatial_X'],
-                new_data[correct]['Spatial_Y'],
-                c='green', s=100, alpha=0.7, marker='o', 
-                edgecolors='darkgreen', linewidths=2, label=f'Correct ({correct.sum()})')
-
-# Incorrect predictions - red circles
-axes[1, 1].scatter(new_data[incorrect]['Spatial_X'],
-                new_data[incorrect]['Spatial_Y'],
-                c='red', s=100, alpha=0.8, marker='o', 
-                edgecolors='darkred', linewidths=2, label=f'Incorrect ({incorrect.sum()})')
-
-axes[1, 1].set_xlabel('Spatial X Coordinate', fontsize=12, fontweight='bold')
-axes[1, 1].set_ylabel('Spatial Y Coordinate', fontsize=12, fontweight='bold')
-axes[1, 1].set_title(f'Spatial Map: Prediction Accuracy\n(Green=Correct, Red=Incorrect, Accuracy={accuracy*100:.1f}%)', 
-                     fontsize=14, fontweight='bold')
-axes[1, 1].legend(loc='upper right', fontsize=10)
-axes[1, 1].grid(True, alpha=0.3)
-axes[1, 1].set_aspect('equal', adjustable='box')
-
-# Plot 5: Spatial Map - Ground Truth vs Predictions
-# Ground truth: dark matter
-axes[1, 2].scatter(new_data[new_data['Ground_Truth_Label'] == 1]['Spatial_X'],
-                new_data[new_data['Ground_Truth_Label'] == 1]['Spatial_Y'],
-                c='darkred', s=80, alpha=0.6, marker='s', 
-                edgecolors='black', linewidths=1.5, label='Ground Truth: Dark Matter')
-# Ground truth: background
-axes[1, 2].scatter(new_data[new_data['Ground_Truth_Label'] == 0]['Spatial_X'],
-                new_data[new_data['Ground_Truth_Label'] == 0]['Spatial_Y'],
-                c='darkblue', s=80, alpha=0.6, marker='s', 
-                edgecolors='black', linewidths=1.5, label='Ground Truth: Background')
-# Predicted: dark matter (overlay with different marker)
-axes[1, 2].scatter(new_data[new_data['Predicted_Label'] == 1]['Spatial_X'],
-                new_data[new_data['Predicted_Label'] == 1]['Spatial_Y'],
-                c='red', s=40, alpha=0.8, marker='*', 
-                edgecolors='yellow', linewidths=1, label='Predicted: Dark Matter')
-# Predicted: background (overlay with different marker)
-axes[1, 2].scatter(new_data[new_data['Predicted_Label'] == 0]['Spatial_X'],
-                new_data[new_data['Predicted_Label'] == 0]['Spatial_Y'],
-                c='blue', s=40, alpha=0.8, marker='o', 
-                edgecolors='cyan', linewidths=1, label='Predicted: Background')
-
-axes[1, 2].set_xlabel('Spatial X Coordinate', fontsize=12, fontweight='bold')
-axes[1, 2].set_ylabel('Spatial Y Coordinate', fontsize=12, fontweight='bold')
-axes[1, 2].set_title('Spatial Map: Ground Truth vs Predictions\n(Squares=Truth, Stars/Circles=Predictions)', 
-                     fontsize=14, fontweight='bold')
-axes[1, 2].legend(loc='upper right', fontsize=9)
-axes[1, 2].grid(True, alpha=0.3)
-axes[1, 2].set_aspect('equal', adjustable='box')
-
-# Plot 6: Confusion Matrix visualization
+# Figure 4: Confusion Matrix
+print("Creating Figure 4: Confusion Matrix...")
 from matplotlib.colors import ListedColormap
-im6 = axes[0, 2].imshow(cm, interpolation='nearest', cmap='Blues', aspect='auto')
-axes[0, 2].set_title('Confusion Matrix', fontsize=14, fontweight='bold')
-axes[0, 2].set_ylabel('Ground Truth', fontsize=12, fontweight='bold')
-axes[0, 2].set_xlabel('Predicted', fontsize=12, fontweight='bold')
-axes[0, 2].set_xticks([0, 1])
-axes[0, 2].set_yticks([0, 1])
-axes[0, 2].set_xticklabels(['Background', 'Dark Matter'])
-axes[0, 2].set_yticklabels(['Background', 'Dark Matter'])
+fig4, ax4 = plt.subplots(figsize=(12, 10))
+im4 = ax4.imshow(cm, interpolation='nearest', cmap='RdYlBu_r', aspect='auto', vmin=0, vmax=cm.max())
+ax4.set_title('Confusion Matrix\n(Model Performance Summary)', fontsize=18, fontweight='bold', pad=20)
+ax4.set_ylabel('Ground Truth (Actual)', fontsize=16, fontweight='bold')
+ax4.set_xlabel('Predicted (Model Output)', fontsize=16, fontweight='bold')
+ax4.set_xticks([0, 1])
+ax4.set_yticks([0, 1])
+ax4.set_xticklabels(['Background\n(No Dark Matter)', 'Dark Matter\n(Present)'], fontsize=14, fontweight='bold')
+ax4.set_yticklabels(['Background\n(No Dark Matter)', 'Dark Matter\n(Present)'], fontsize=14, fontweight='bold')
 
-# Add text annotations
+# Add text annotations with percentages
+total = cm.sum()
 thresh = cm.max() / 2.
 for i in range(2):
     for j in range(2):
-        axes[0, 2].text(j, i, format(cm[i, j], 'd'),
-                       ha="center", va="center",
-                       color="white" if cm[i, j] > thresh else "black",
-                       fontsize=16, fontweight='bold')
+        count = cm[i, j]
+        percentage = (count / total * 100) if total > 0 else 0
+        ax4.text(j, i, f'{count}\n({percentage:.1f}%)',
+               ha="center", va="center",
+               color="white" if cm[i, j] > thresh else "black",
+               fontsize=20, fontweight='bold')
 
-# Add labels for TN, FP, FN, TP
-axes[0, 2].text(0, -0.3, 'TN', ha='center', fontsize=10, color='gray')
-axes[0, 2].text(1, -0.3, 'FP', ha='center', fontsize=10, color='gray')
-axes[0, 2].text(-0.3, 0, 'TN', ha='center', fontsize=10, color='gray', rotation=90)
-axes[0, 2].text(-0.3, 1, 'FN', ha='center', fontsize=10, color='gray', rotation=90)
+# Add labels for TN, FP, FN, TP with explanations
+ax4.text(0, -0.5, 'True Negative (TN)\nCorrectly identified background', 
+        ha='center', fontsize=12, color='darkgreen', fontweight='bold')
+ax4.text(1, -0.5, 'False Positive (FP)\nIncorrectly predicted dark matter', 
+        ha='center', fontsize=12, color='orange', fontweight='bold')
+ax4.text(-0.5, 0, 'True Negative (TN)\nCorrectly identified background', 
+        ha='center', fontsize=12, color='darkgreen', fontweight='bold', rotation=90)
+ax4.text(-0.5, 1, 'False Negative (FN)\nMissed dark matter', 
+        ha='center', fontsize=12, color='red', fontweight='bold', rotation=90)
 
-plt.colorbar(im6, ax=axes[0, 2], label='Count')
+# Add True Positive label
+ax4.text(1, 1, 'True Positive (TP)\nCorrectly identified dark matter', 
+        ha='left', fontsize=12, color='darkgreen', fontweight='bold',
+        bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
 
+plt.colorbar(im4, ax=ax4, label='Number of Galaxies', shrink=0.8)
 plt.tight_layout()
-plt.savefig('dark_matter_visualization.png', dpi=300, bbox_inches='tight')
-print("\nVisualization saved as 'dark_matter_visualization.png'")
-plt.show()
+plt.savefig(os.path.join(visualizations_dir, '4_confusion_matrix.png'), dpi=300, bbox_inches='tight')
+plt.close()
+print("  Saved: 4_confusion_matrix.png")
+
+print("\nAll visualizations saved as separate figure files!")
 
 # Print summary statistics
 print("\n" + "="*60)
