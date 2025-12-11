@@ -171,3 +171,4 @@ For questions or suggestions, please open an issue on GitHub.
 
 **Note**: This is a research/educational project demonstrating quantum machine learning applications in astrophysics. For production use, additional validation and optimization would be required.
 
+
