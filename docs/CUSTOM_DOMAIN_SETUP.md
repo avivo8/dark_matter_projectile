@@ -1,54 +1,60 @@
-# Setting Up Custom Domain: dark_matter_projectile.com
+# Custom Domain Setup: dark_matter_projectile.com
 
-## Step-by-Step Guide
+## Step 1: DNS Configuration (At Your Domain Provider)
 
-### Prerequisites
-- You need to own the domain `dark_matter_projectile.com`
-- Access to your domain registrar's DNS settings
+You need to configure DNS records at your domain registrar (where you bought `dark_matter_projectile.com`).
 
----
+### Option A: Using A Records (Recommended)
 
-## Step 1: Add CNAME File ✅
-**Already done!** The `CNAME` file has been created in the `website/` folder with your domain name.
+Add these **A records** in your DNS settings:
 
----
+```
+Type: A
+Name: @ (or blank/root)
+Value: 185.199.108.153
+TTL: 3600
 
-## Step 2: Configure DNS Settings
+Type: A
+Name: @ (or blank/root)
+Value: 185.199.109.153
+TTL: 3600
 
-Go to your domain registrar (where you bought the domain) and add these DNS records:
+Type: A
+Name: @ (or blank/root)
+Value: 185.199.110.153
+TTL: 3600
 
-### Option A: Using Apex Domain (dark_matter_projectile.com)
+Type: A
+Name: @ (or blank/root)
+Value: 185.199.111.153
+TTL: 3600
+```
 
-Add **4 A records** pointing to GitHub Pages IPs:
+### Option B: Using CNAME (Alternative)
 
-| Type | Name | Value | TTL |
-|------|------|-------|-----|
-| A | @ | 185.199.108.153 | 3600 |
-| A | @ | 185.199.109.153 | 3600 |
-| A | @ | 185.199.110.153 | 3600 |
-| A | @ | 185.199.111.153 | 3600 |
+Add this **CNAME record**:
 
-**OR** add a **CNAME record**:
+```
+Type: CNAME
+Name: @ (or blank/root)
+Value: avivo8.github.io
+TTL: 3600
+```
 
-| Type | Name | Value | TTL |
-|------|------|-------|-----|
-| CNAME | @ | avivo8.github.io | 3600 |
+**Note:** Some providers don't allow CNAME on root domain (@). If that's the case, use Option A.
 
-### Option B: Using www Subdomain (www.dark_matter_projectile.com)
+### For www Subdomain
 
-Add a **CNAME record**:
+Add this **CNAME record**:
 
-| Type | Name | Value | TTL |
-|------|------|-------|-----|
-| CNAME | www | avivo8.github.io | 3600 |
+```
+Type: CNAME
+Name: www
+Value: avivo8.github.io
+TTL: 3600
+```
 
-**Recommended:** Use both A records (for apex) AND CNAME (for www) to support both:
-- `dark_matter_projectile.com`
-- `www.dark_matter_projectile.com`
-
----
-
-## Step 3: Enable Custom Domain in GitHub
+## Step 2: Enable Custom Domain in GitHub
 
 1. Go to: **https://github.com/avivo8/dark_matter_projectile/settings/pages**
 
@@ -57,100 +63,72 @@ Add a **CNAME record**:
    dark_matter_projectile.com
    ```
 
-3. Check **"Enforce HTTPS"** (recommended)
+3. Check **"Enforce HTTPS"** (after DNS propagates)
 
 4. Click **"Save"**
 
-5. Wait 5-10 minutes for DNS to propagate
+## Step 3: Wait for DNS Propagation
 
----
+- DNS changes can take **5 minutes to 48 hours** to propagate
+- Usually takes **15-30 minutes**
 
-## Step 4: Verify DNS Propagation
-
-Check if DNS is working:
-
+Check if it's working:
 ```bash
-# Check A records
-dig dark_matter_projectile.com +short
-
-# Check CNAME
-dig www.dark_matter_projectile.com +short
+dig dark_matter_projectile.com
+# or visit: https://www.whatsmydns.net/#A/dark_matter_projectile.com
 ```
 
-Or use online tools:
-- https://www.whatsmydns.net
-- https://dnschecker.org
+## Step 4: Verify It Works
 
----
+Once DNS propagates:
+1. Visit: **https://dark_matter_projectile.com**
+2. GitHub will automatically enable HTTPS (SSL certificate)
+3. Both `dark_matter_projectile.com` and `www.dark_matter_projectile.com` will work
 
-## Step 5: Wait for SSL Certificate
-
-GitHub will automatically provision an SSL certificate (HTTPS) for your domain. This usually takes:
-- **5-10 minutes** after DNS is configured
-- Up to **24 hours** in some cases
-
-You'll see a green checkmark ✅ next to your domain in GitHub Pages settings when it's ready.
-
----
-
-## Common Domain Registrars Setup
+## Common Domain Providers
 
 ### Namecheap
 1. Go to Domain List → Manage
 2. Advanced DNS tab
-3. Add A records (use IPs above) or CNAME
-4. Save changes
+3. Add A records (use Option A above)
 
 ### GoDaddy
-1. Go to My Products → DNS
-2. Add A records or CNAME
-3. Save
-
-### Google Domains
-1. Go to DNS → Custom records
-2. Add A records or CNAME
-3. Save
+1. DNS Management
+2. Add A records (use Option A above)
 
 ### Cloudflare
-1. Go to DNS → Records
-2. Add A records (use IPs above) or CNAME
-3. **Important:** Set Proxy status to "DNS only" (gray cloud) for GitHub Pages
-4. Save
+1. DNS → Records
+2. Add A records (use Option A above)
+3. Set Proxy status to "DNS only" (gray cloud) initially
 
----
+### Google Domains
+1. DNS → Custom records
+2. Add A records (use Option A above)
 
 ## Troubleshooting
 
-### Domain not working?
-1. **Wait longer** - DNS can take up to 48 hours to propagate globally
-2. **Check DNS records** - Make sure they're correct
-3. **Clear browser cache** - Try incognito mode
-4. **Check GitHub Pages settings** - Domain should show green checkmark ✅
+**Domain not working?**
+- Wait longer (DNS can take up to 48 hours)
+- Check DNS propagation: https://www.whatsmydns.net
+- Verify A records point to GitHub IPs
+- Make sure CNAME file is in the `website/` folder
 
-### HTTPS not working?
-- Wait for GitHub to provision SSL certificate (can take up to 24 hours)
-- Make sure "Enforce HTTPS" is checked in GitHub Pages settings
-- Clear browser cache
+**HTTPS not working?**
+- Wait 24 hours after DNS setup for GitHub to issue SSL certificate
+- Uncheck "Enforce HTTPS" temporarily, then re-enable after certificate is issued
 
-### Still using GitHub subdomain?
-- DNS might not have propagated yet
-- Check that CNAME file is in the `website/` folder
-- Verify DNS records are correct
+**www not working?**
+- Make sure you added the CNAME record for `www`
+- Wait for DNS propagation
 
----
+## Your Website URLs
 
-## After Setup
-
-Once configured, your website will be available at:
-- **https://dark_matter_projectile.com** (with HTTPS!)
-- **https://www.dark_matter_projectile.com** (if you set up www)
-
-The GitHub Pages URL (`avivo8.github.io/dark_matter_projectile`) will automatically redirect to your custom domain.
+After setup, your website will be accessible at:
+- **https://dark_matter_projectile.com** ✅
+- **https://www.dark_matter_projectile.com** ✅
+- **https://avivo8.github.io/dark_matter_projectile/** (still works)
 
 ---
 
-## Need Help?
-
-- GitHub Pages docs: https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site
-- Check DNS: https://www.whatsmydns.net
+**Note:** The CNAME file has been created in the `website/` folder. After you push this and configure DNS, GitHub Pages will automatically use your custom domain!
 
