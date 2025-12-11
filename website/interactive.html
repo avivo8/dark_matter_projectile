@@ -252,20 +252,23 @@
 
             <!-- Instructions -->
             <div class="instructions">
-                <h3>How to Use:</h3>
+                <h3>🎯 How It Works:</h3>
+                <div style="background: rgba(102, 126, 234, 0.2); padding: 1rem; border-radius: 10px; margin-bottom: 1rem;">
+                    <p style="color: var(--text-primary); font-weight: 600; margin-bottom: 0.5rem;">✨ You Decide Where Dark Matter Is!</p>
+                    <p style="color: var(--text-secondary); margin: 0;">Click on galaxies to mark where YOU think dark matter is present. The system will then show you how gravitational lensing distorts those galaxies, and the quantum ML model will predict dark matter locations.</p>
+                </div>
                 <ol>
-                    <li><strong>Choose Example:</strong> Select one of the example galaxy field images below, or upload your own</li>
-                    <li><strong>Mark Dark Matter:</strong> Click on galaxies where you believe dark matter is present (red markers)</li>
-                    <li><strong>Mark Background:</strong> Switch to "Mark Background" mode and click on galaxies that are background/no dark matter (blue markers)</li>
-                    <li><strong>Generate Grid:</strong> Click "Generate Galaxy Grid" to extract features from your marked regions</li>
-                    <li><strong>Predict:</strong> Click "Run Prediction" to let the quantum ML model predict dark matter locations</li>
-                    <li><strong>Compare:</strong> View your markings vs model predictions side by side</li>
+                    <li><strong>Choose Example Image:</strong> Select one of the galaxy field images below</li>
+                    <li><strong>YOU Mark Dark Matter:</strong> Click on galaxies where YOU decide dark matter is present (red markers appear)</li>
+                    <li><strong>See Gravitational Lensing:</strong> Watch how dark matter distorts the galaxy shapes (visual effect)</li>
+                    <li><strong>Model Predicts:</strong> The quantum ML model analyzes the distorted galaxies and predicts where dark matter is</li>
+                    <li><strong>Compare:</strong> See how the model's predictions compare to YOUR choices</li>
                 </ol>
             </div>
 
             <!-- Image Selection Section -->
             <div class="upload-section">
-                <h3 style="color: var(--text-primary); margin-bottom: 1.5rem; font-family: 'Space Grotesk', sans-serif;">Choose an Example Image</h3>
+                <h3 style="color: var(--text-primary); margin-bottom: 1.5rem; font-family: 'Space Grotesk', sans-serif;">Step 1: Choose a Galaxy Field Image</h3>
                 <div class="example-images-grid" id="exampleImagesGrid">
                     <div class="example-image-card" data-image="example1">
                         <div class="example-preview" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);">
@@ -288,21 +291,6 @@
                         </div>
                         <p>Example 3: Galaxy Survey</p>
                     </div>
-                    <div class="example-image-card" data-image="upload">
-                        <div class="example-preview" style="background: rgba(102, 126, 234, 0.2); border: 2px dashed rgba(102, 126, 234, 0.5);">
-                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📸</div>
-                            <div style="font-size: 0.8rem; color: rgba(255,255,255,0.7);">Upload Your Own</div>
-                        </div>
-                        <p>Upload Custom Image</p>
-                    </div>
-                </div>
-                <div class="image-upload-area" id="uploadArea" style="display: none;">
-                    <input type="file" id="fileInput" accept="image/*">
-                    <div>
-                        <div style="font-size: 3rem; margin-bottom: 1rem;">📸</div>
-                        <h3 style="color: var(--text-primary); margin-bottom: 0.5rem;">Upload Galaxy Grid Image</h3>
-                        <p style="color: var(--text-secondary);">Click here or drag and drop an image file</p>
-                    </div>
                 </div>
 
                 <div class="canvas-container" id="canvasContainer">
@@ -310,21 +298,48 @@
                 </div>
 
                 <div class="controls-panel" id="controlsPanel">
+                    <div style="background: rgba(255, 0, 0, 0.1); padding: 1rem; border-radius: 10px; margin-bottom: 1rem; border-left: 4px solid #ff4444;">
+                        <p style="color: var(--text-primary); font-weight: 600; margin: 0;">
+                            ✨ Step 2: YOU Decide Where Dark Matter Is!
+                        </p>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 0.5rem 0 0 0;">
+                            Click on galaxies where YOU think dark matter is present. Red markers will appear, and you'll see how gravitational lensing distorts those galaxies.
+                        </p>
+                    </div>
                     <div class="control-group">
-                        <label>Mode:</label>
+                        <label>Your Action:</label>
                         <div class="btn-group">
-                            <button class="btn-mode active" data-mode="dark-matter">Mark Dark Matter</button>
-                            <button class="btn-mode" data-mode="background">Mark Background</button>
-                            <button class="btn-mode" data-mode="clear">Clear Markers</button>
+                            <button class="btn-mode active" data-mode="dark-matter" style="background: rgba(255, 0, 0, 0.2); border-color: #ff4444;">
+                                🎯 Mark Dark Matter Location
+                            </button>
+                            <button class="btn-mode" data-mode="clear">Clear All Markers</button>
                         </div>
                     </div>
                     <div class="control-group">
-                        <label>Actions:</label>
+                        <label>Next Steps:</label>
                         <div class="btn-group">
-                            <button class="btn btn-primary" id="generateGridBtn">Generate Galaxy Grid</button>
-                            <button class="btn btn-primary" id="predictBtn">Run Prediction</button>
-                            <button class="btn btn-secondary" id="resetBtn">Reset</button>
+                            <button class="btn btn-primary" id="showLensingBtn" style="display: none;">Show Gravitational Lensing Effect</button>
+                            <button class="btn btn-primary" id="predictBtn" style="display: none;">Let Model Predict Dark Matter</button>
+                            <button class="btn btn-secondary" id="resetBtn">Start Over</button>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lensing Effect Section -->
+            <div class="results-section" id="lensingSection" style="display: none;">
+                <div class="result-card" style="grid-column: 1 / -1;">
+                    <h3>🔭 Gravitational Lensing Effect</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                        This shows how dark matter distorts the galaxies you marked. The red circles show YOUR dark matter locations, 
+                        and you can see how those galaxies appear stretched and distorted - this is gravitational lensing in action!
+                    </p>
+                    <canvas id="lensingCanvas"></canvas>
+                    <div style="margin-top: 1rem; padding: 1rem; background: rgba(102, 126, 234, 0.1); border-radius: 10px;">
+                        <p style="color: var(--text-primary); margin: 0;">
+                            <strong>What you're seeing:</strong> Dark matter bends light, making galaxies behind it appear stretched and elliptical. 
+                            This distortion is what the quantum ML model uses to detect dark matter!
+                        </p>
                     </div>
                 </div>
             </div>
@@ -332,30 +347,28 @@
             <!-- Results Section -->
             <div class="results-section" id="resultsSection" style="display: none;">
                 <div class="result-card">
-                    <h3>Your Markings (Ground Truth)</h3>
+                    <h3>✨ Your Dark Matter Choices</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 1rem;">These are the galaxies YOU marked as having dark matter nearby. Notice how they appear distorted due to gravitational lensing.</p>
                     <canvas id="groundTruthCanvas"></canvas>
                     <div class="stats-grid">
                         <div class="stat-item">
                             <div class="stat-value" id="darkMatterCount">0</div>
-                            <div class="stat-label">Dark Matter Regions</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value" id="backgroundCount">0</div>
-                            <div class="stat-label">Background Regions</div>
+                            <div class="stat-label">Your Dark Matter Choices</div>
                         </div>
                     </div>
                 </div>
                 <div class="result-card">
-                    <h3>Model Predictions</h3>
+                    <h3>🤖 Model's Predictions</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 1rem;">The quantum ML model analyzed the distorted galaxy shapes and predicted where dark matter is located.</p>
                     <canvas id="predictionCanvas"></canvas>
                     <div class="stats-grid">
                         <div class="stat-item">
                             <div class="stat-value" id="predictedDarkMatter">0</div>
-                            <div class="stat-label">Predicted Dark Matter</div>
+                            <div class="stat-label">Model Predicted Dark Matter</div>
                         </div>
                         <div class="stat-item">
                             <div class="stat-value" id="accuracy">-</div>
-                            <div class="stat-label">Accuracy</div>
+                            <div class="stat-label">Agreement with You</div>
                         </div>
                     </div>
                 </div>

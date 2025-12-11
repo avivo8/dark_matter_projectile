@@ -36,19 +36,75 @@ def load_model():
         print("Scaler loaded successfully!")
         
         # Try to load the full model
+        model_file = os.path.join(models_dir, 'vqc_model.pkl')
+        if os.path.exists(model_file) and os.path.getsize(model_file) > 0:
+            try:
+                with open(model_file, 'rb') as f:
+                    data = f.read()
+                    if len(data) > 0:
+                        vqc_model = pickle.loads(data)
+                        print("Full model loaded successfully!")
+                        return True
+            except Exception as e:
+                print(f"Could not load pickled model: {e}")
+        
+        # Try to reconstruct from config
         try:
-            with open(os.path.join(models_dir, 'vqc_model.pkl'), 'rb') as f:
-                data = f.read()
-                if len(data) > 0:
-                    vqc_model = pickle.loads(data)
-                    print("Full model loaded successfully!")
-                    return True
-        except (FileNotFoundError, ValueError, EOFError):
-            print("Full model file not found or empty. Model will need to be retrained.")
+            with open(os.path.join(models_dir, 'vqc_model_config.pkl'), 'rb') as f:
+                config = pickle.load(f)
+            
+            print("Reconstructing model from config...")
+            from qiskit_machine_learning.algorithms import VQC
+            from qiskit_machine_learning.optimizers import COBYLA
+            from qiskit.circuit.library import ZZFeatureMap, RealAmplitudes
+            from qiskit.primitives import Sampler
+            
+            num_qubits = config.get('num_qubits', 2)
+            reps_feature = config.get('reps_feature', 2)
+            reps_ansatz = config.get('reps_ansatz', 3)
+            
+            feature_map = ZZFeatureMap(
+                feature_dimension=num_qubits,
+                reps=reps_feature,
+                entanglement='linear'
+            )
+            
+            ansatz = RealAmplitudes(
+                num_qubits=num_qubits,
+                reps=reps_ansatz,
+                entanglement='linear'
+            )
+            
+            optimizer = COBYLA(maxiter=50)
+            sampler = Sampler()
+            
+            vqc_model = VQC(
+                feature_map=feature_map,
+                ansatz=ansatz,
+                optimizer=optimizer,
+                sampler=sampler,
+                loss='cross_entropy'
+            )
+            
+            # Load training data and retrain quickly
+            import pandas as pd
+            data_file = os.path.join(project_root, 'data', 'dark_matter_dataset.csv')
+            df = pd.read_csv(data_file)
+            X = df[['Observed_Eps1', 'Observed_Eps2']].values[:100]
+            Y = df['Label'].values[:100]
+            X_scaled = scaler.transform(X)
+            
+            print("Quick retraining model for API use...")
+            vqc_model.fit(X_scaled, Y)
+            print("Model reconstructed and retrained!")
+            return True
+            
+        except Exception as e:
+            print(f"Could not reconstruct model: {e}")
             return False
             
-    except FileNotFoundError:
-        print("Error: Model files not found. Please train the model first.")
+    except FileNotFoundError as e:
+        print(f"Error: Model files not found: {e}")
         return False
 
 @app.route('/health', methods=['GET'])
@@ -170,5 +226,5 @@ if __name__ == '__main__':
     print("  POST /predict - Predict from features array")
     print("  POST /predict_batch - Predict from galaxy objects")
     
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
 

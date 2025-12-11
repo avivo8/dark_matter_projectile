@@ -7,9 +7,12 @@ let groundTruthCanvas = null;
 let groundTruthCtx = null;
 let predictionCanvas = null;
 let predictionCtx = null;
-let markers = [];
+let lensingCanvas = null;
+let lensingCtx = null;
+let markers = []; // Only dark matter markers now
 let galaxyData = [];
 let predictions = [];
+let originalImageData = null; // Store original image for lensing effect
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -19,6 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
     groundTruthCtx = groundTruthCanvas.getContext('2d');
     predictionCanvas = document.getElementById('predictionCanvas');
     predictionCtx = predictionCanvas.getContext('2d');
+    lensingCanvas = document.getElementById('lensingCanvas');
+    lensingCtx = lensingCanvas.getContext('2d');
 
     setupEventListeners();
 });
@@ -31,10 +36,8 @@ const exampleImages = {
 };
 
 function setupEventListeners() {
-    const uploadArea = document.getElementById('uploadArea');
-    const fileInput = document.getElementById('fileInput');
     const modeButtons = document.querySelectorAll('.btn-mode');
-    const generateGridBtn = document.getElementById('generateGridBtn');
+    const showLensingBtn = document.getElementById('showLensingBtn');
     const predictBtn = document.getElementById('predictBtn');
     const resetBtn = document.getElementById('resetBtn');
     const exampleCards = document.querySelectorAll('.example-image-card');
@@ -45,51 +48,19 @@ function setupEventListeners() {
             const imageType = card.dataset.image;
             exampleCards.forEach(c => c.classList.remove('selected'));
             card.classList.add('selected');
-            
-            if (imageType === 'upload') {
-                document.getElementById('exampleImagesGrid').style.display = 'none';
-                uploadArea.style.display = 'block';
-            } else {
-                uploadArea.style.display = 'none';
-                document.getElementById('exampleImagesGrid').style.display = 'grid';
-                loadExampleImage(imageType);
-            }
+            loadExampleImage(imageType);
         });
     });
 
-    // File upload
-    uploadArea.addEventListener('click', () => fileInput.click());
-    uploadArea.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        uploadArea.classList.add('dragover');
-    });
-    uploadArea.addEventListener('dragleave', () => {
-        uploadArea.classList.remove('dragover');
-    });
-    uploadArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        uploadArea.classList.remove('dragover');
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            handleFileSelect(files[0]);
-        }
-    });
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            handleFileSelect(e.target.files[0]);
-        }
-    });
-
-    // Mode buttons
+    // Mode buttons (only dark matter marking now)
     modeButtons.forEach(btn => {
         btn.addEventListener('click', () => {
-            modeButtons.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentMode = btn.dataset.mode;
-            if (currentMode === 'clear') {
+            if (btn.dataset.mode === 'clear') {
                 clearMarkers();
-                currentMode = 'dark-matter';
-                modeButtons[0].classList.add('active');
+            } else {
+                modeButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentMode = btn.dataset.mode;
             }
         });
     });
@@ -98,9 +69,15 @@ function setupEventListeners() {
     imageCanvas.addEventListener('click', handleCanvasClick);
 
     // Action buttons
-    generateGridBtn.addEventListener('click', generateGalaxyGrid);
-    predictBtn.addEventListener('click', runPrediction);
-    resetBtn.addEventListener('click', resetAll);
+    if (showLensingBtn) {
+        showLensingBtn.addEventListener('click', showGravitationalLensing);
+    }
+    if (predictBtn) {
+        predictBtn.addEventListener('click', runPrediction);
+    }
+    if (resetBtn) {
+        resetBtn.addEventListener('click', resetAll);
+    }
 }
 
 function handleFileSelect(file) {
@@ -156,36 +133,65 @@ function handleCanvasClick(e) {
     );
 
     if (existingIndex >= 0) {
+        // Remove marker if clicking on existing one
         markers.splice(existingIndex, 1);
     } else {
+        // Add dark matter marker
         markers.push({
             x: x,
             y: y,
-            type: currentMode === 'dark-matter' ? 'dark-matter' : 'background'
+            type: 'dark-matter'
         });
     }
 
     drawMarkers();
     updateStats();
+    
+    // Show "Show Lensing Effect" button when markers are added
+    if (markers.length > 0) {
+        document.getElementById('showLensingBtn').style.display = 'inline-block';
+    } else {
+        document.getElementById('showLensingBtn').style.display = 'none';
+    }
 }
 
 function drawMarkers() {
-    // Redraw image
-    const img = new Image();
-    img.onload = () => {
-        imageCtx.drawImage(img, 0, 0, imageCanvas.width, imageCanvas.height);
-        // Draw markers
-        markers.forEach(marker => {
-            imageCtx.beginPath();
-            imageCtx.arc(marker.x, marker.y, 8, 0, 2 * Math.PI);
-            imageCtx.fillStyle = marker.type === 'dark-matter' ? 'rgba(255, 0, 0, 0.7)' : 'rgba(0, 0, 255, 0.7)';
-            imageCtx.fill();
-            imageCtx.strokeStyle = marker.type === 'dark-matter' ? 'darkred' : 'darkblue';
-            imageCtx.lineWidth = 2;
-            imageCtx.stroke();
-        });
-    };
-    img.src = imageCanvas.toDataURL();
+    // Redraw original image
+    if (originalImageData) {
+        imageCtx.putImageData(originalImageData, 0, 0);
+    } else {
+        const img = new Image();
+        img.onload = () => {
+            imageCtx.drawImage(img, 0, 0, imageCanvas.width, imageCanvas.height);
+            // Store original for lensing effect
+            originalImageData = imageCtx.getImageData(0, 0, imageCanvas.width, imageCanvas.height);
+            drawMarkersOnImage();
+        };
+        img.src = imageCanvas.toDataURL();
+        return;
+    }
+    drawMarkersOnImage();
+}
+
+function drawMarkersOnImage() {
+    // Draw red markers for dark matter locations
+    markers.forEach(marker => {
+        // Draw marker circle
+        imageCtx.beginPath();
+        imageCtx.arc(marker.x, marker.y, 12, 0, 2 * Math.PI);
+        imageCtx.fillStyle = 'rgba(255, 0, 0, 0.6)';
+        imageCtx.fill();
+        imageCtx.strokeStyle = 'darkred';
+        imageCtx.lineWidth = 3;
+        imageCtx.stroke();
+        
+        // Draw pulsing effect
+        imageCtx.beginPath();
+        imageCtx.arc(marker.x, marker.y, 18, 0, 2 * Math.PI);
+        imageCtx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
+        imageCtx.lineWidth = 2;
+        imageCtx.stroke();
+    });
 }
 
 function clearMarkers() {
@@ -199,113 +205,245 @@ function clearMarkers() {
 }
 
 function updateStats() {
-    const darkMatterCount = markers.filter(m => m.type === 'dark-matter').length;
-    const backgroundCount = markers.filter(m => m.type === 'background').length;
+    const darkMatterCount = markers.length;
     document.getElementById('darkMatterCount').textContent = darkMatterCount;
-    document.getElementById('backgroundCount').textContent = backgroundCount;
 }
 
-function generateGalaxyGrid() {
+function showGravitationalLensing() {
     if (markers.length === 0) {
-        alert('Please mark at least some galaxies first!');
+        alert('Please mark at least one dark matter location first!');
         return;
     }
 
-    // Generate synthetic galaxy data based on markers
-    galaxyData = [];
-    markers.forEach(marker => {
-        // Extract pixel data around marker
-        const x = Math.floor(marker.x);
-        const y = Math.floor(marker.y);
-        const size = 10;
-        
-        // Get pixel data
-        const imageData = imageCtx.getImageData(
-            Math.max(0, x - size), 
-            Math.max(0, y - size), 
-            Math.min(size * 2, imageCanvas.width - x + size),
-            Math.min(size * 2, imageCanvas.height - y + size)
-        );
-
-        // Calculate ellipticity-like features from image
-        const features = calculateFeaturesFromImage(imageData, marker.type === 'dark-matter');
-        
-        galaxyData.push({
-            x: marker.x,
-            y: marker.y,
-            eps1: features.eps1,
-            eps2: features.eps2,
-            label: marker.type === 'dark-matter' ? 1 : 0
-        });
-    });
-
-    // Draw ground truth visualization
-    drawGroundTruth();
-}
-
-function calculateFeaturesFromImage(imageData, isDarkMatter) {
-    // Simulate ellipticity calculation from image
-    // In a real implementation, this would analyze the galaxy shape
-    const pixels = imageData.data;
-    let sum = 0;
-    let count = 0;
-
-    for (let i = 0; i < pixels.length; i += 4) {
-        const brightness = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
-        sum += brightness;
-        count++;
-    }
-
-    const avgBrightness = sum / count;
+    // Show lensing effect visualization
+    lensingCanvas.width = imageCanvas.width;
+    lensingCanvas.height = imageCanvas.height;
     
-    // Generate synthetic ellipticity based on brightness and dark matter presence
-    // Dark matter regions tend to have stronger shear (higher ellipticity)
-    const baseEps1 = (avgBrightness / 255 - 0.5) * 0.1;
-    const baseEps2 = (Math.random() - 0.5) * 0.1;
-    
-    if (isDarkMatter) {
-        // Add stronger shear for dark matter regions
-        return {
-            eps1: baseEps1 + (Math.random() * 0.03 + 0.05),
-            eps2: baseEps2 + (Math.random() * 0.03 + 0.05)
-        };
-    } else {
-        // Weaker/zero shear for background
-        return {
-            eps1: baseEps1 + (Math.random() - 0.5) * 0.02,
-            eps2: baseEps2 + (Math.random() - 0.5) * 0.02
-        };
-    }
-}
-
-function drawGroundTruth() {
-    groundTruthCanvas.width = imageCanvas.width;
-    groundTruthCanvas.height = imageCanvas.height;
-    
-    // Draw image
+    // Draw original image
     const img = new Image();
     img.onload = () => {
-        groundTruthCtx.drawImage(img, 0, 0, groundTruthCanvas.width, groundTruthCanvas.height);
+        lensingCtx.drawImage(img, 0, 0, lensingCanvas.width, lensingCanvas.height);
+        
+        // Apply gravitational lensing distortion effect to galaxies near dark matter markers
+        applyLensingEffect();
         
         // Draw markers
         markers.forEach(marker => {
-            groundTruthCtx.beginPath();
-            groundTruthCtx.arc(marker.x, marker.y, 10, 0, 2 * Math.PI);
-            groundTruthCtx.fillStyle = marker.type === 'dark-matter' 
-                ? 'rgba(255, 0, 0, 0.6)' 
-                : 'rgba(0, 0, 255, 0.6)';
-            groundTruthCtx.fill();
-            groundTruthCtx.strokeStyle = marker.type === 'dark-matter' ? 'darkred' : 'darkblue';
-            groundTruthCtx.lineWidth = 3;
-            groundTruthCtx.stroke();
+            lensingCtx.beginPath();
+            lensingCtx.arc(marker.x, marker.y, 15, 0, 2 * Math.PI);
+            lensingCtx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+            lensingCtx.fill();
+            lensingCtx.strokeStyle = 'darkred';
+            lensingCtx.lineWidth = 3;
+            lensingCtx.stroke();
+            
+            // Label
+            lensingCtx.fillStyle = 'white';
+            lensingCtx.font = 'bold 14px Arial';
+            lensingCtx.fillText('DM', marker.x - 8, marker.y - 20);
         });
+        
+        // Show the lensing section
+        document.getElementById('lensingSection').style.display = 'grid';
+        document.getElementById('showLensingBtn').style.display = 'none';
+        document.getElementById('predictBtn').style.display = 'inline-block';
     };
     img.src = imageCanvas.toDataURL();
 }
 
+function applyLensingEffect() {
+    // Apply visual distortion to galaxies near dark matter markers
+    // This simulates gravitational lensing
+    
+    const imageData = lensingCtx.getImageData(0, 0, lensingCanvas.width, lensingCanvas.height);
+    const data = imageData.data;
+    const width = lensingCanvas.width;
+    const height = lensingCanvas.height;
+    
+    // Create new image data for distorted version
+    const newData = new ImageData(width, height);
+    
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            let newX = x;
+            let newY = y;
+            
+            // Check distance to each dark matter marker
+            markers.forEach(marker => {
+                const dx = x - marker.x;
+                const dy = y - marker.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                // Apply lensing distortion within radius
+                if (dist < 80 && dist > 0) {
+                    const strength = (80 - dist) / 80; // Stronger closer to marker
+                    const angle = Math.atan2(dy, dx);
+                    
+                    // Stretch along radial direction (gravitational lensing effect)
+                    const stretch = 1 + strength * 0.3;
+                    newX += Math.cos(angle) * strength * 5;
+                    newY += Math.sin(angle) * strength * 5;
+                    
+                    // Also add tangential stretch (makes elliptical)
+                    const perpAngle = angle + Math.PI / 2;
+                    newX += Math.cos(perpAngle) * strength * 3;
+                    newY += Math.sin(perpAngle) * strength * 3;
+                }
+            });
+            
+            // Clamp coordinates
+            newX = Math.max(0, Math.min(width - 1, Math.round(newX)));
+            newY = Math.max(0, Math.min(height - 1, Math.round(newY)));
+            
+            // Copy pixel
+            const origIdx = (y * width + x) * 4;
+            const newIdx = (newY * width + newX) * 4;
+            
+            newData.data[origIdx] = data[newIdx];
+            newData.data[origIdx + 1] = data[newIdx + 1];
+            newData.data[origIdx + 2] = data[newIdx + 2];
+            newData.data[origIdx + 3] = data[newIdx + 3];
+        }
+    }
+    
+    // Apply the distorted image
+    lensingCtx.putImageData(newData, 0, 0);
+    
+    // Generate galaxy data from the distorted image
+    generateGalaxyDataFromLensing();
+}
+
+function generateGalaxyDataFromLensing() {
+    // Extract features from the lensed (distorted) image
+    galaxyData = [];
+    
+    // Sample galaxies across the image (not just at markers)
+    const samplePoints = [];
+    
+    // Add points at marker locations
+    markers.forEach(marker => {
+        samplePoints.push({x: marker.x, y: marker.y, isDarkMatter: true});
+    });
+    
+    // Add random sample points across the image
+    for (let i = 0; i < 50; i++) {
+        samplePoints.push({
+            x: Math.random() * imageCanvas.width,
+            y: Math.random() * imageCanvas.height,
+            isDarkMatter: false
+        });
+    }
+    
+    samplePoints.forEach(point => {
+        const x = Math.floor(point.x);
+        const y = Math.floor(point.y);
+        const size = 15;
+        
+        // Get pixel data from lensed image
+        const imageData = lensingCtx.getImageData(
+            Math.max(0, x - size), 
+            Math.max(0, y - size), 
+            Math.min(size * 2, lensingCanvas.width - x + size),
+            Math.min(size * 2, lensingCanvas.height - y + size)
+        );
+
+        // Calculate ellipticity features from distorted image
+        const features = calculateFeaturesFromLensedImage(imageData, point.isDarkMatter);
+        
+        galaxyData.push({
+            x: point.x,
+            y: point.y,
+            eps1: features.eps1,
+            eps2: features.eps2,
+            label: point.isDarkMatter ? 1 : 0
+        });
+    });
+}
+
+function calculateFeaturesFromLensedImage(imageData, isDarkMatter) {
+    // Calculate ellipticity from the lensed (distorted) image
+    const pixels = imageData.data;
+    const width = Math.sqrt(pixels.length / 4);
+    const height = width;
+    
+    // Calculate centroid
+    let sumX = 0, sumY = 0, totalBrightness = 0;
+    for (let i = 0; i < pixels.length; i += 4) {
+        const brightness = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
+        const x = (i / 4) % width;
+        const y = Math.floor((i / 4) / width);
+        sumX += x * brightness;
+        sumY += y * brightness;
+        totalBrightness += brightness;
+    }
+    
+    if (totalBrightness === 0) {
+        return {eps1: 0, eps2: 0};
+    }
+    
+    const cx = sumX / totalBrightness;
+    const cy = sumY / totalBrightness;
+    
+    // Calculate shape moments (ellipticity)
+    let q11 = 0, q22 = 0, q12 = 0;
+    for (let i = 0; i < pixels.length; i += 4) {
+        const brightness = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
+        const x = (i / 4) % width;
+        const y = Math.floor((i / 4) / width);
+        const dx = x - cx;
+        const dy = y - cy;
+        const r2 = dx * dx + dy * dy;
+        if (r2 > 0) {
+            q11 += brightness * dx * dx / r2;
+            q22 += brightness * dy * dy / r2;
+            q12 += brightness * dx * dy / r2;
+        }
+    }
+    
+    // Normalize
+    const norm = q11 + q22;
+    if (norm === 0) {
+        return {eps1: 0, eps2: 0};
+    }
+    
+    // Calculate ellipticity components
+    const eps1 = (q11 - q22) / norm;
+    const eps2 = (2 * q12) / norm;
+    
+    // Scale to match training data range
+    return {
+        eps1: Math.max(-0.1, Math.min(0.1, eps1 * 0.1)),
+        eps2: Math.max(-0.1, Math.min(0.1, eps2 * 0.1))
+    };
+}
+
+function drawGroundTruth() {
+    groundTruthCanvas.width = lensingCanvas.width;
+    groundTruthCanvas.height = lensingCanvas.height;
+    
+    // Draw the lensed image (showing gravitational lensing effect)
+    groundTruthCtx.drawImage(lensingCanvas, 0, 0);
+    
+    // Draw your dark matter markers
+    markers.forEach(marker => {
+        groundTruthCtx.beginPath();
+        groundTruthCtx.arc(marker.x, marker.y, 12, 0, 2 * Math.PI);
+        groundTruthCtx.fillStyle = 'rgba(255, 0, 0, 0.7)';
+        groundTruthCtx.fill();
+        groundTruthCtx.strokeStyle = 'darkred';
+        groundTruthCtx.lineWidth = 3;
+        groundTruthCtx.stroke();
+        
+        // Label
+        groundTruthCtx.fillStyle = 'white';
+        groundTruthCtx.font = 'bold 16px Arial';
+        groundTruthCtx.fillText('YOU', marker.x - 12, marker.y - 25);
+    });
+}
+
 async function runPrediction() {
     if (galaxyData.length === 0) {
-        alert('Please generate galaxy grid first!');
+        alert('Please show gravitational lensing effect first!');
         return;
     }
 
@@ -323,6 +461,9 @@ async function runPrediction() {
         // In production, this would call a backend API
         predictions = await predictDarkMatter(features);
         
+        // Draw ground truth (your choices)
+        drawGroundTruth();
+        
         // Draw predictions
         drawPredictions();
         
@@ -331,6 +472,7 @@ async function runPrediction() {
         document.getElementById('accuracy').textContent = (accuracy * 100).toFixed(1) + '%';
         document.getElementById('predictedDarkMatter').textContent = 
             predictions.filter(p => p === 1).length;
+        document.getElementById('darkMatterCount').textContent = markers.length;
         
         // Show results
         document.getElementById('resultsSection').style.display = 'grid';
@@ -375,41 +517,53 @@ async function predictDarkMatter(features) {
 }
 
 function drawPredictions() {
-    predictionCanvas.width = imageCanvas.width;
-    predictionCanvas.height = imageCanvas.height;
+    predictionCanvas.width = lensingCanvas.width;
+    predictionCanvas.height = lensingCanvas.height;
     
-    // Draw image
-    const img = new Image();
-    img.onload = () => {
-        predictionCtx.drawImage(img, 0, 0, predictionCanvas.width, predictionCanvas.height);
+    // Draw the lensed image (showing gravitational lensing)
+    predictionCtx.drawImage(lensingCanvas, 0, 0);
+    
+    // Draw model predictions
+    galaxyData.forEach((galaxy, index) => {
+        if (index >= predictions.length) return;
         
-        // Draw predictions
-        galaxyData.forEach((galaxy, index) => {
-            const prediction = predictions[index];
-            predictionCtx.beginPath();
-            predictionCtx.arc(galaxy.x, galaxy.y, 12, 0, 2 * Math.PI);
+        const prediction = predictions[index];
+        predictionCtx.beginPath();
+        predictionCtx.arc(galaxy.x, galaxy.y, 14, 0, 2 * Math.PI);
+        
+        if (prediction === 1) {
+            // Predicted dark matter - yellow star
+            predictionCtx.fillStyle = 'rgba(255, 255, 0, 0.6)';
+            predictionCtx.fill();
+            predictionCtx.strokeStyle = 'yellow';
+            predictionCtx.lineWidth = 3;
+            predictionCtx.stroke();
             
-            if (prediction === 1) {
-                // Predicted dark matter - yellow star
-                predictionCtx.fillStyle = 'rgba(255, 255, 0, 0.7)';
-                predictionCtx.fill();
-                predictionCtx.strokeStyle = 'yellow';
-                predictionCtx.lineWidth = 2;
-                predictionCtx.stroke();
-                
-                // Draw star shape
-                drawStar(predictionCtx, galaxy.x, galaxy.y, 5, 12, 5);
-            } else {
-                // Predicted background - light blue circle
-                predictionCtx.fillStyle = 'rgba(173, 216, 230, 0.5)';
-                predictionCtx.fill();
-                predictionCtx.strokeStyle = 'cyan';
-                predictionCtx.lineWidth = 2;
-                predictionCtx.stroke();
-            }
-        });
-    };
-    img.src = imageCanvas.toDataURL();
+            // Draw star shape
+            drawStar(predictionCtx, galaxy.x, galaxy.y, 5, 14, 5);
+            
+            // Label
+            predictionCtx.fillStyle = 'white';
+            predictionCtx.font = 'bold 14px Arial';
+            predictionCtx.fillText('MODEL', galaxy.x - 20, galaxy.y - 25);
+        } else {
+            // Predicted background - light blue circle (smaller, less prominent)
+            predictionCtx.fillStyle = 'rgba(173, 216, 230, 0.3)';
+            predictionCtx.fill();
+            predictionCtx.strokeStyle = 'cyan';
+            predictionCtx.lineWidth = 1;
+            predictionCtx.stroke();
+        }
+    });
+    
+    // Also draw your markers for comparison
+    markers.forEach(marker => {
+        predictionCtx.beginPath();
+        predictionCtx.arc(marker.x, marker.y, 10, 0, 2 * Math.PI);
+        predictionCtx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+        predictionCtx.lineWidth = 2;
+        predictionCtx.stroke();
+    });
 }
 
 function drawStar(ctx, cx, cy, spikes, outerRadius, innerRadius) {
@@ -541,7 +695,10 @@ function loadExampleImage(type) {
             document.getElementById('controlsPanel').style.display = 'block';
             document.getElementById('exampleImagesGrid').style.display = 'none';
             
-            // Store galaxy positions for reference (optional - for better feature extraction)
+            // Store original image data for lensing effect
+            originalImageData = imageCtx.getImageData(0, 0, width, height);
+            
+            // Store galaxy positions
             window.exampleGalaxies = galaxies;
             
             URL.revokeObjectURL(url);
@@ -554,11 +711,14 @@ function resetAll() {
     markers = [];
     galaxyData = [];
     predictions = [];
+    originalImageData = null;
     document.getElementById('resultsSection').style.display = 'none';
+    document.getElementById('lensingSection').style.display = 'none';
     document.getElementById('canvasContainer').style.display = 'none';
     document.getElementById('controlsPanel').style.display = 'none';
-    document.getElementById('uploadArea').style.display = 'none';
     document.getElementById('exampleImagesGrid').style.display = 'grid';
+    document.getElementById('showLensingBtn').style.display = 'none';
+    document.getElementById('predictBtn').style.display = 'none';
     document.querySelectorAll('.example-image-card').forEach(c => c.classList.remove('selected'));
     imageFile = null;
     updateStats();
