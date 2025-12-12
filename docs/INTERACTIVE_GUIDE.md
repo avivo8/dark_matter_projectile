@@ -17,7 +17,7 @@ pip install flask flask-cors
 Or install all requirements:
 
 ```bash
-pip install -r requirements.txt
+pip install -r python-requirements.txt
 ```
 
 ### 2. Train the Model (if not already done)

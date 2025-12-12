@@ -30,7 +30,7 @@ The `netlify.toml` and `netlify-build.sh` are already set up. Just make sure:
 
 ## Files Created to Fix This
 
-- ✅ `.netlifyignore` - Tells Netlify to ignore `requirements.txt`
+- ✅ Renamed `requirements.txt` to `python-requirements.txt` - Netlify won't auto-detect Python
 - ✅ `netlify.toml` - Configures build settings
 - ✅ `netlify-build.sh` - Simple build script
 
@@ -42,7 +42,7 @@ The `netlify.toml` and `netlify-build.sh` are already set up. Just make sure:
 
 ## Why This Happens
 
-Netlify auto-detects Python when it sees `requirements.txt`. Since this is a static HTML/CSS/JS site, Python dependencies are only needed for:
+Netlify auto-detects Python when it sees `requirements.txt`. We've renamed it to `python-requirements.txt` so Netlify won't detect it. Since this is a static HTML/CSS/JS site, Python dependencies are only needed for:
 - Local development
 - Training the model (`train_model.py`)
 - Running the API server (`src/api_server.py`)

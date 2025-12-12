@@ -32,7 +32,7 @@ cd dark_energy_density_proj
 
 2. Install dependencies:
 ```bash
-pip install -r requirements.txt
+pip install -r python-requirements.txt
 ```
 
 3. Verify the environment:
@@ -93,7 +93,7 @@ dark_energy_density_proj/
 ├── train_model.py                    # VQC training script
 ├── visualize_dark_matter.py          # Visualization script
 ├── setup_environment.py               # Environment verification
-├── requirements.txt                  # Python dependencies
+├── python-requirements.txt          # Python dependencies
 ├── README.md                         # This file
 └── dark_matter_dataset.csv            # Generated dataset (after running generator)
 ```

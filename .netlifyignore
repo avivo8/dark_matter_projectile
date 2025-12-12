@@ -1,5 +1,6 @@
 # Ignore Python dependencies - this is a static site
-requirements.txt
+# requirements.txt has been renamed to python-requirements.txt to prevent Netlify auto-detection
+python-requirements.txt
 
 # Ignore Python source files (not needed for static site)
 *.py

@@ -36,7 +36,7 @@ dark_matter_projectile/
 │   ├── README.md (detailed)
 │   ├── WEBSITE_README.md
 │   └── PUSH_TO_GITHUB.md
-├── requirements.txt        # Python dependencies
+├── python-requirements.txt        # Python dependencies
 └── README.md              # This file
 ```
 
@@ -66,7 +66,7 @@ cd dark_matter_projectile
 
 2. Install dependencies:
 ```bash
-pip install -r requirements.txt
+pip install -r python-requirements.txt
 ```
 
 3. Verify the environment:
