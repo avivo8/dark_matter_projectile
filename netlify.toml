@@ -5,8 +5,9 @@
   # Publish directory - where your website files are located
   publish = "website"
   
-  # No build command needed for static HTML site
-  # command = ""
+  # Explicitly set build command - this is a static site
+  # This prevents Netlify from auto-detecting Python and trying to install dependencies
+  command = "bash netlify-build.sh"
 
 # Redirect rules (optional - for SPA routing if needed)
 # [[redirects]]

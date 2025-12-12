@@ -19,8 +19,12 @@ This is the best option if you want automatic deployments whenever you push to G
 
 3. **Configure Build Settings**
    - **Base directory**: Leave empty (or set to `/` if needed)
-   - **Build command**: Leave empty (no build needed for static site)
+   - **Build command**: `echo 'Static site - no build needed'` (or leave empty)
    - **Publish directory**: `website`
+   - **⚠️ IMPORTANT**: After clicking "Deploy site", go to Site settings → Build & deploy → Environment
+   - Add environment variable: `NPM_FLAGS` = `--ignore-scripts` (this helps prevent auto-detection)
+   - Or better: Go to Build & deploy → Build settings → Edit settings
+   - Under "Dependencies", make sure Python is NOT selected/installed
    - Click "Deploy site"
 
 4. **Set Custom Domain (Optional)**
@@ -126,6 +130,31 @@ If you prefer command-line tools.
 ---
 
 ## Troubleshooting
+
+### Build fails with "qiskit-aer" or Python dependency errors?
+
+**This is a static website - Python dependencies are NOT needed!**
+
+If Netlify tries to install Python dependencies and fails:
+
+1. **Disable Python in Netlify settings:**
+   - Go to Site settings → Build & deploy → Build settings
+   - Click "Edit settings"
+   - Under "Dependencies" or "Build environment", disable Python
+   - Or set Python version to "None" if available
+
+2. **Verify `.netlifyignore` exists:**
+   - The `.netlifyignore` file should exclude `requirements.txt`
+   - This file is already in the repo
+
+3. **Check `netlify.toml`:**
+   - Make sure build command is set (even if it's just an echo)
+   - This prevents Netlify from auto-detecting Python
+
+4. **Manual override in Netlify UI:**
+   - Site settings → Build & deploy → Environment variables
+   - Add: `SKIP_PYTHON_INSTALL` = `true` (if supported)
+   - Or remove any Python-related environment variables
 
 ### Images not loading?
 - Make sure image paths in HTML are relative (e.g., `visualizations/image.png` not `/visualizations/image.png`)

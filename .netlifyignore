@@ -1,0 +1,33 @@
+# Ignore Python dependencies - this is a static site
+requirements.txt
+
+# Ignore Python source files (not needed for static site)
+*.py
+!website/*.py
+
+# Ignore data and model files (not needed for static site)
+data/
+models/
+*.pkl
+*.csv
+
+# Ignore development files
+src/
+docs/
+*.md
+!website/*.md
+
+# Ignore git files
+.git/
+.gitignore
+
+# Ignore other development files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
