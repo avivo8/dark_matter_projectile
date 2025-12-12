@@ -6,6 +6,20 @@ A quantum machine learning project that uses a Variational Quantum Classifier (V
 
 This project demonstrates how quantum machine learning can be applied to astrophysical problems, specifically the detection of dark matter through weak gravitational lensing. Dark matter halos cause gravitational shear, which distorts the shapes of background galaxies. By analyzing these distortions (measured as ellipticity), we can identify regions with dark matter concentrations.
 
+## 🌐 Live Website
+
+Visit the live website hosted on Netlify:
+
+**🔗 [View Live Website](https://dark-matter-projectile.netlify.app)**
+
+The website features:
+- Interactive visualizations of dark matter detection
+- Detailed explanations of quantum machine learning methodology
+- Project overview and results
+- Beautiful, responsive design
+
+*Note: If you've configured a custom domain, update this URL accordingly.*
+
 ## 📁 Project Structure
 
 ```
