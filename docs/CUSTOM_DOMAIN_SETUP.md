@@ -132,3 +132,4 @@ After setup, your website will be accessible at:
 
 **Note:** The CNAME file has been created in the `website/` folder. After you push this and configure DNS, GitHub Pages will automatically use your custom domain!
 
+
