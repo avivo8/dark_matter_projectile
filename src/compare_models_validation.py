@@ -24,11 +24,37 @@ print("\n1. Loading data...")
 df_original = pd.read_csv(os.path.join(data_dir, 'concentration_validation.csv'))
 df_improved = pd.read_csv(os.path.join(data_dir, 'sdss_predictions_with_improved.csv'))
 
-# Extract values
-log10_m_orig = df_original['log10_M_halo'].values
-log10_c_ref = df_original['log10_c_ref'].values
-log10_c_pred_orig = df_original['log10_c_pred'].values
-log10_c_pred_improved = df_improved['log10_c_pred_improved'].values
+# Ensure proper alignment - merge on common identifiers (ra, dec, or use index)
+# Check if we can align by ra/dec or use index alignment
+if len(df_original) == len(df_improved):
+    # Try to align by ra/dec if available, otherwise use index
+    if 'ra' in df_original.columns and 'dec' in df_original.columns:
+        # Merge on ra/dec to ensure alignment
+        df_merged = pd.merge(
+            df_original[['ra', 'dec', 'log10_M_halo', 'log10_c_pred', 'log10_c_ref']],
+            df_improved[['ra', 'dec', 'log10_c_pred_improved']],
+            on=['ra', 'dec'],
+            how='inner'
+        )
+        print(f"   ✓ Merged {len(df_merged)} galaxies on ra/dec")
+    else:
+        # Use index alignment
+        df_merged = df_original[['log10_M_halo', 'log10_c_pred', 'log10_c_ref']].copy()
+        df_merged['log10_c_pred_improved'] = df_improved['log10_c_pred_improved'].values
+        print(f"   ✓ Using index alignment for {len(df_merged)} galaxies")
+else:
+    print("   ⚠ Warning: Data lengths don't match!")
+    # Use shorter length
+    min_len = min(len(df_original), len(df_improved))
+    df_merged = df_original[['log10_M_halo', 'log10_c_pred', 'log10_c_ref']].iloc[:min_len].copy()
+    df_merged['log10_c_pred_improved'] = df_improved['log10_c_pred_improved'].values[:min_len]
+    print(f"   ⚠ Using first {min_len} galaxies")
+
+# Extract values from merged dataframe
+log10_m_orig = df_merged['log10_M_halo'].values
+log10_c_ref = df_merged['log10_c_ref'].values
+log10_c_pred_orig = df_merged['log10_c_pred'].values
+log10_c_pred_improved = df_merged['log10_c_pred_improved'].values
 
 # Calculate metrics
 mse_orig = np.mean((log10_c_pred_orig - log10_c_ref)**2)
@@ -64,7 +90,8 @@ ax1.set_ylabel(r'$\log_{10} c_{\mathrm{pred}}$ (Original)', fontsize=12, fontwei
 ax1.set_title('Original Model\nPredicted vs Reference', fontsize=14, fontweight='bold')
 ax1.grid(True, alpha=0.3)
 ax1.legend()
-ax1.text(0.05, 0.95, f'MSE: {mse_orig:.6f}\nBias: {bias_orig:+.6f}',
+corr_orig = np.corrcoef(log10_c_ref, log10_c_pred_orig)[0,1]
+ax1.text(0.05, 0.95, f'MSE: {mse_orig:.6f}\nBias: {bias_orig:+.6f}\nCorr: {corr_orig:.3f}',
          transform=ax1.transAxes, fontsize=10,
          verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
 
@@ -73,12 +100,16 @@ ax2.scatter(log10_c_ref, log10_c_pred_improved, s=30, alpha=0.6, c='darkgreen', 
 ax2.plot([log10_c_ref.min(), log10_c_ref.max()], 
          [log10_c_ref.min(), log10_c_ref.max()], 
          'r--', linewidth=2, label='y=x')
+# Set same axis limits for fair comparison
+ax2.set_xlim(ax1.get_xlim())
+ax2.set_ylim(ax1.get_ylim())
 ax2.set_xlabel(r'$\log_{10} c_{\mathrm{ref}}$ (Reference)', fontsize=12, fontweight='bold')
 ax2.set_ylabel(r'$\log_{10} c_{\mathrm{pred}}$ (Improved)', fontsize=12, fontweight='bold')
 ax2.set_title('Improved Model (Phase 2 & 3)\nPredicted vs Reference', fontsize=14, fontweight='bold')
 ax2.grid(True, alpha=0.3)
 ax2.legend()
-ax2.text(0.05, 0.95, f'MSE: {mse_improved:.6f}\nBias: {bias_improved:+.6f}',
+corr_improved = np.corrcoef(log10_c_ref, log10_c_pred_improved)[0,1]
+ax2.text(0.05, 0.95, f'MSE: {mse_improved:.6f}\nBias: {bias_improved:+.6f}\nCorr: {corr_improved:.3f}',
          transform=ax2.transAxes, fontsize=10,
          verticalalignment='top', bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.8))
 
