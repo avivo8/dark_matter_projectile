@@ -38,7 +38,7 @@ print("\n1. Generating multi-redshift training data...")
 
 # Define redshifts for training
 redshifts = [0.0, 0.3, 0.6, 1.0]
-n_samples_per_z = 30  # Reduced to 30 samples per redshift = 120 total (to prevent overfitting)
+n_samples_per_z = 75  # Balanced: 75 samples per redshift = 300 total (better learning, reasonable time)
 np.random.seed(42)
 
 all_data = []
@@ -116,8 +116,8 @@ print(f"   Testing: {len(X_test)} samples")
 print("\n3. Building quantum circuit...")
 
 num_qubits = X_train.shape[1]  # 3 qubits: eps1, eps2, z
-reps_feature = 1  # Reduced feature map repetitions
-reps_ansatz = 3  # Further reduced to prevent overfitting
+reps_feature = 2  # Increased feature map repetitions for better expressivity
+reps_ansatz = 4  # Increased ansatz layers for better learning
 
 feature_map = ZZFeatureMap(
     feature_dimension=num_qubits,
@@ -141,13 +141,15 @@ print(f"   ✓ Qubits: {num_qubits} (eps1, eps2, z)")
 # ============================================================================
 print("\n4. Setting up multi-observable measurement...")
 
-# Create observables for 3 qubits (minimal set to prevent overfitting)
+# Create observables for 3 qubits (increased for better expressivity)
 observable_z0 = SparsePauliOp(['ZII'])
 observable_z1 = SparsePauliOp(['IZI'])
 observable_z2 = SparsePauliOp(['IIZ'])
+observable_z0z1 = SparsePauliOp(['ZZI'])
+observable_z0z2 = SparsePauliOp(['ZIZ'])
 
-# Reduced to 3 observables to prevent overfitting
-observables = [observable_z0, observable_z1, observable_z2]
+# Increased to 5 observables for better learning
+observables = [observable_z0, observable_z1, observable_z2, observable_z0z1, observable_z0z2]
 
 # Create quantum circuit
 qc = QuantumCircuit(num_qubits)
@@ -251,8 +253,8 @@ class MultiRedshiftVQR:
                 bias = np.mean(predictions_corrected[mask] - y[mask])
                 bias_penalty += self.bias_weight * bias**2
         
-        # L2 regularization to prevent overfitting (increased)
-        l2_reg = 0.05 * np.mean(weights**2)
+        # L2 regularization to prevent overfitting (moderate)
+        l2_reg = 0.02 * np.mean(weights**2)
         
         return mse + bias_penalty / len(unique_z) + l2_reg
     
@@ -315,9 +317,9 @@ class MultiRedshiftVQR:
                 biases[z_val] = np.mean(predictions[mask] - y[mask])
         return biases
 
-# Create model with reduced complexity
-optimizer = COBYLA(maxiter=100)  # Further reduced iterations
-bias_weight = 1.0  # Reduced bias weight
+# Create model with balanced complexity
+optimizer = COBYLA(maxiter=120)  # Balanced iterations
+bias_weight = 1.5  # Moderate bias weight
 
 vqr_model = MultiRedshiftVQR(
     feature_map=feature_map,
@@ -334,14 +336,14 @@ print(f"   ✓ Model created with redshift-dependent bias correction")
 # Training
 # ============================================================================
 print("\n5. Training multi-redshift VQR model...")
-print("   Using regularization to prevent overfitting:")
-print("   - Reduced ansatz layers: 3 (from 6)")
-print("   - Reduced feature map: 1 repetition")
-print("   - Reduced observables: 3 (from 6)")
-print("   - L2 regularization: 0.05")
-print("   - Reduced training samples: 120 total")
-print("   - Reduced max iterations: 100")
-vqr_model.fit(X_train, Y_train, maxiter=100)
+print("   Model configuration:")
+print("   - Ansatz layers: 4")
+print("   - Feature map: 2 repetitions")
+print("   - Observables: 5")
+print("   - L2 regularization: 0.02")
+print("   - Training samples: 300 total (75 per redshift)")
+print("   - Max iterations: 120")
+vqr_model.fit(X_train, Y_train, maxiter=120)
 
 # ============================================================================
 # Evaluation

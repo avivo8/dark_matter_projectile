@@ -63,11 +63,14 @@ ansatz = RealAmplitudes(
     entanglement='linear'
 )
 
-# Create observables
+# Create observables (match training configuration)
 observable_z0 = SparsePauliOp(['ZII'])
 observable_z1 = SparsePauliOp(['IZI'])
 observable_z2 = SparsePauliOp(['IIZ'])
-observables = [observable_z0, observable_z1, observable_z2]
+observable_z0z1 = SparsePauliOp(['ZZI'])
+observable_z0z2 = SparsePauliOp(['ZIZ'])
+# Use same observables as training (will be loaded from config)
+observables = [observable_z0, observable_z1, observable_z2, observable_z0z1, observable_z0z2]
 
 qc = QuantumCircuit(num_qubits)
 qc.compose(feature_map, inplace=True)
@@ -75,7 +78,9 @@ qc.compose(ansatz, inplace=True)
 
 estimator = Estimator()
 qnns = []
-for obs in observables:
+# Use the number of observables from config
+num_observables = config.get('num_observables', len(observables))
+for obs in observables[:num_observables]:
     qnn = EstimatorQNN(
         estimator=estimator,
         circuit=qc,
