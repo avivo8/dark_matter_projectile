@@ -12,6 +12,12 @@ import os
 from astroquery.sdss import SDSS
 from astropy import coordinates as coords
 from astropy.coordinates import SkyCoord
+from astropy import units as u
+from astropy.io import fits
+from astropy.wcs import WCS
+from PIL import Image
+import requests
+from io import BytesIO
 from sklearn.preprocessing import MinMaxScaler
 from qiskit_machine_learning.algorithms import VQC
 from qiskit_machine_learning.optimizers import COBYLA
@@ -252,30 +258,195 @@ except Exception as e:
     print(f"   ✗ Error making predictions: {e}")
     exit(1)
 
-# Create visualization
-print("\n5. Creating visualization...")
+# Get SDSS image cutout for comparison
+print("\n5. Fetching SDSS telescope image...")
+sdss_image = None
+sdss_wcs = None
 
-# Create figure with two subplots for better clarity
-fig = plt.figure(figsize=(18, 10))
-gs = fig.add_gridspec(1, 2, width_ratios=[1.2, 1], hspace=0.3, wspace=0.3)
+try:
+    # Create coordinate object
+    co = coords.SkyCoord(ra=ra_center, dec=dec_center, unit='deg')
+    
+    # Get SDSS image cutout (returns FITS files)
+    # Scale is in arcseconds per pixel (0.396 arcsec/pixel for SDSS)
+    # Size in arcminutes
+    scale = 0.396  # arcsec/pixel
+    size_arcmin = radius * 2 * 60  # Convert radius to arcminutes and double for full size
+    
+    try:
+        # Try to get images using astroquery
+        images = SDSS.get_images(coordinates=co, radius=radius*u.deg, 
+                                 band='r', data_release=17)
+        if images and len(images) > 0:
+            sdss_image_data = images[0][0].data
+            sdss_wcs = WCS(images[0][0].header)
+            sdss_image = sdss_image_data
+            print(f"   ✓ Retrieved SDSS image cutout ({sdss_image.shape})")
+        else:
+            raise ValueError("No images returned")
+    except Exception as e:
+        print(f"   ⚠ Could not get SDSS image via astroquery: {e}")
+        print("   Trying direct URL method...")
+        
+        # Alternative: Construct SDSS SkyServer URL
+        # SDSS SkyServer image cutout URL format
+        # http://skyserver.sdss.org/dr17/SkyServerWS/ImgCutout/getjpeg?ra=RA&dec=DEC&scale=SCALE&width=WIDTH&height=HEIGHT
+        
+        # Calculate pixel dimensions
+        width_pixels = int(size_arcmin * 60 / scale)
+        height_pixels = width_pixels  # Square image
+        
+        url = f"http://skyserver.sdss.org/dr17/SkyServerWS/ImgCutout/getjpeg?ra={ra_center}&dec={dec_center}&scale={scale}&width={width_pixels}&height={height_pixels}"
+        
+        try:
+            response = requests.get(url, timeout=10)
+            if response.status_code == 200:
+                img = Image.open(BytesIO(response.content))
+                sdss_image = np.array(img.convert('RGB'))
+                print(f"   ✓ Retrieved SDSS image via URL ({sdss_image.shape})")
+            else:
+                raise ValueError(f"HTTP {response.status_code}")
+        except Exception as e2:
+            print(f"   ⚠ Could not get SDSS image via URL: {e2}")
+            print("   Will create visualization without original image")
+            sdss_image = None
+
+except Exception as e:
+    print(f"   ⚠ Error fetching SDSS image: {e}")
+    print("   Will create visualization without original image")
+    sdss_image = None
+
+# Create visualization
+print("\n6. Creating visualization...")
+
+# Create figure with three subplots: original image, analysis, and density map
+if sdss_image is not None:
+    fig = plt.figure(figsize=(22, 10))
+    gs = fig.add_gridspec(1, 3, width_ratios=[1, 1.2, 1], hspace=0.3, wspace=0.3)
+    
+    # First plot: Original SDSS telescope image with dark matter overlay
+    # Display the SDSS image.
+    # Important: SDSS JPEG cutouts may be capped (e.g. 4096px), so the actual field-of-view
+    # can be smaller than the requested radius. We compute the true footprint from image size.
+    overlay_transform = None
+    if sdss_wcs is not None and getattr(sdss_image, "ndim", 0) == 2:
+        # FITS + WCS path: plot in pixel space with a WCSAxes projection and overlay in world coords.
+        ax0 = fig.add_subplot(gs[0, 0], projection=sdss_wcs)
+        vmin = np.percentile(sdss_image, 5)
+        vmax = np.percentile(sdss_image, 99)
+        ax0.imshow(sdss_image, origin='lower', cmap='gray', vmin=vmin, vmax=vmax)
+        overlay_transform = ax0.get_transform('world')
+    else:
+        # JPEG (RGB) or FITS without WCS: approximate world footprint using scale and returned image size.
+        ax0 = fig.add_subplot(gs[0, 0])
+        img_h, img_w = sdss_image.shape[:2]
+        fov_x_deg = (img_w * scale) / 3600.0
+        fov_y_deg = (img_h * scale) / 3600.0
+        extent = [
+            ra_center + fov_x_deg / 2.0,
+            ra_center - fov_x_deg / 2.0,   # RA increases to the left on sky images
+            dec_center - fov_y_deg / 2.0,
+            dec_center + fov_y_deg / 2.0,
+        ]
+        if getattr(sdss_image, "ndim", 0) == 3:  # RGB image
+            ax0.imshow(sdss_image, origin='lower', extent=extent)
+        else:  # Grayscale array
+            vmin = np.percentile(sdss_image, 5)
+            vmax = np.percentile(sdss_image, 99)
+            ax0.imshow(sdss_image, origin='lower', cmap='gray', vmin=vmin, vmax=vmax, extent=extent)
+        ax0.set_xlim(extent[0], extent[1])
+        ax0.set_ylim(extent[2], extent[3])
+    
+    # Overlay dark matter detections (masks defined here for overlay)
+    high_dm_mask_overlay = predictions == 1
+    background_mask_overlay = predictions == 0
+    
+    scatter_kwargs = {}
+    if overlay_transform is not None:
+        scatter_kwargs["transform"] = overlay_transform
+
+    if np.any(background_mask_overlay):
+        ax0.scatter(
+            df_sdss['ra'].values[background_mask_overlay],
+            df_sdss['dec'].values[background_mask_overlay],
+            c='#4A90E2',
+            s=60,
+            alpha=0.6,
+            edgecolors='#2E5C8A',
+            linewidths=1,
+            label=f'Background (n={np.sum(background_mask_overlay)})',
+            zorder=2,
+            **scatter_kwargs
+        )
+    
+    if np.any(high_dm_mask_overlay):
+        sizes = 80 + prob_dark_matter[high_dm_mask_overlay] * 200
+        scatter_dm_overlay = ax0.scatter(
+            df_sdss['ra'].values[high_dm_mask_overlay],
+            df_sdss['dec'].values[high_dm_mask_overlay],
+            c=prob_dark_matter[high_dm_mask_overlay],
+            s=sizes,
+            cmap='YlOrRd',
+            alpha=0.8,
+            edgecolors='red',
+            linewidths=2,
+            vmin=0,
+            vmax=1,
+            label=f'Dark Matter (n={np.sum(high_dm_mask_overlay)})',
+            zorder=3,
+            **scatter_kwargs
+        )
+        
+        # Highlight high-confidence detections
+        high_conf_mask = prob_dark_matter[high_dm_mask_overlay] > 0.7
+        if np.any(high_conf_mask):
+            ax0.scatter(
+                df_sdss['ra'].values[high_dm_mask_overlay][high_conf_mask],
+                df_sdss['dec'].values[high_dm_mask_overlay][high_conf_mask],
+                s=250,
+                facecolors='none',
+                edgecolors='yellow',
+                linewidths=3,
+                label=f'High Confidence (n={np.sum(high_conf_mask)})',
+                zorder=4,
+                **scatter_kwargs
+            )
+    
+    ax0.set_xlabel('Right Ascension (degrees)', fontsize=12, fontweight='bold')
+    ax0.set_ylabel('Declination (degrees)', fontsize=12, fontweight='bold')
+    ax0.set_title('SDSS Telescope Image\nwith Dark Matter Overlay', 
+                  fontsize=14, fontweight='bold', pad=15, color='white')
+    ax0.legend(loc='upper right', fontsize=9, framealpha=0.9)
+    
+    # Adjust subplot indices for remaining plots
+    ax1_idx = 1
+    ax2_idx = 2
+else:
+    # No SDSS image available, use original 2-panel layout
+    fig = plt.figure(figsize=(18, 10))
+    gs = fig.add_gridspec(1, 2, width_ratios=[1.2, 1], hspace=0.3, wspace=0.3)
+    ax1_idx = 0
+    ax2_idx = 1
 
 # Main plot: All galaxies with dark matter highlighted
-ax1 = fig.add_subplot(gs[0, 0])
+ax1 = fig.add_subplot(gs[0, ax1_idx])
 
 # Separate dark matter and background galaxies
 high_dm_mask = predictions == 1
 background_mask = predictions == 0
 
-# Plot background galaxies first (smaller, lighter)
+# Plot background galaxies first (clear but distinct from dark matter)
 if np.any(background_mask):
     ax1.scatter(
         df_sdss['ra'].values[background_mask],
         df_sdss['dec'].values[background_mask],
-        c='lightgray',
-        s=30,
-        alpha=0.4,
-        edgecolors='none',
-        label=f'Background Galaxies (n={np.sum(background_mask)})'
+        c='#4A90E2',  # Bright blue for better visibility
+        s=80,
+        alpha=0.85,
+        edgecolors='#2E5C8A',  # Darker blue edges
+        linewidths=1,
+        label=f'Background Galaxies (n={np.sum(background_mask)})',
+        zorder=1  # Ensure they're behind dark matter markers
     )
 
 # Plot dark matter galaxies with high visibility
@@ -295,7 +466,8 @@ if np.any(high_dm_mask):
         linewidths=2,
         vmin=0,
         vmax=1,
-        label=f'Dark Matter Detected (n={np.sum(high_dm_mask)})'
+        label=f'Dark Matter Detected (n={np.sum(high_dm_mask)})',
+        zorder=2  # Ensure they're on top of background galaxies
     )
     
     # Add bright red circles around high-confidence detections
@@ -327,7 +499,7 @@ ax1.grid(True, alpha=0.3, linestyle='--')
 ax1.legend(loc='upper right', fontsize=10, framealpha=0.9)
 
 # Second plot: Dark matter only (zoomed/clustered view)
-ax2 = fig.add_subplot(gs[0, 1])
+ax2 = fig.add_subplot(gs[0, ax2_idx])
 
 if np.any(high_dm_mask):
     # Create a density/heatmap of dark matter locations
