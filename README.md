@@ -24,6 +24,7 @@ dark_matter_projectile/
 │   ├── generate_dark_matter_dataset.py
 │   ├── train_model.py
 │   ├── visualize_dark_matter.py
+│   ├── apply_to_sdss.py   # Apply model to real SDSS data
 │   └── setup_environment.py
 ├── data/                   # Data files
 │   └── dark_matter_dataset.csv
@@ -35,7 +36,8 @@ dark_matter_projectile/
 │   ├── 1_model_predictions.png
 │   ├── 2_ground_truth_labels.png
 │   ├── 3_prediction_accuracy.png
-│   └── 4_confusion_matrix.png
+│   ├── 4_confusion_matrix.png
+│   └── sdss_dark_matter_detection.png  # SDSS real data results
 ├── website/                # Website files
 │   ├── index.html
 │   ├── interactive.html   # Interactive dark matter detection
@@ -56,6 +58,7 @@ dark_matter_projectile/
 - **Synthetic Data Generation**: Generates realistic galaxy ellipticity datasets with known dark matter labels
 - **Spatial Visualization**: Creates 2D spatial maps showing dark matter distribution and prediction accuracy
 - **Performance Analysis**: Comprehensive visualization comparing model predictions with ground truth
+- **Real Data Application**: Apply the model to real SDSS galaxy data to detect dark matter in actual observations
 - **Modern Website**: Beautiful, responsive website showcasing the project
 
 ## 📋 Requirements
@@ -127,7 +130,26 @@ This creates visualization images in `visualizations/` directory:
 - **Confusion matrix** analysis
 - **Prediction accuracy** visualizations
 
-### 4. View Website
+### 4. Apply Model to Real SDSS Data
+
+Apply the trained model to real galaxy data from the Sloan Digital Sky Survey (SDSS):
+
+```bash
+python3 src/apply_to_sdss.py
+```
+
+This will:
+- Query SDSS for galaxy ellipticity measurements
+- Apply the trained VQC model to detect dark matter
+- Generate a spatial visualization showing detected dark matter locations
+- Save results to `data/sdss_predictions.csv`
+
+The visualization is saved as `visualizations/sdss_dark_matter_detection.png` showing:
+- Galaxy positions (RA, Dec coordinates)
+- Color-coded dark matter probability
+- Highlighted regions with detected dark matter halos
+
+### 5. View Website
 
 Open `website/index.html` in your browser or use a local server:
 
@@ -137,7 +159,7 @@ python3 -m http.server 8000
 # Then visit: http://localhost:8000
 ```
 
-### 5. Interactive Dark Matter Detection
+### 6. Interactive Dark Matter Detection
 
 Use the interactive feature to upload galaxy images and get predictions:
 
