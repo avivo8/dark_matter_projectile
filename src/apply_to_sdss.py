@@ -255,63 +255,154 @@ except Exception as e:
 # Create visualization
 print("\n5. Creating visualization...")
 
-fig, ax = plt.subplots(figsize=(14, 10))
+# Create figure with two subplots for better clarity
+fig = plt.figure(figsize=(18, 10))
+gs = fig.add_gridspec(1, 2, width_ratios=[1.2, 1], hspace=0.3, wspace=0.3)
 
-# Create scatter plot colored by dark matter probability
-scatter = ax.scatter(
-    df_sdss['ra'].values,
-    df_sdss['dec'].values,
-    c=prob_dark_matter,
-    s=50,
-    cmap='hot',
-    alpha=0.7,
-    edgecolors='black',
-    linewidths=0.5
-)
+# Main plot: All galaxies with dark matter highlighted
+ax1 = fig.add_subplot(gs[0, 0])
 
-# Highlight galaxies with high dark matter probability
+# Separate dark matter and background galaxies
 high_dm_mask = predictions == 1
-if np.any(high_dm_mask):
-    ax.scatter(
-        df_sdss['ra'].values[high_dm_mask],
-        df_sdss['dec'].values[high_dm_mask],
-        s=150,
-        facecolors='none',
-        edgecolors='cyan',
-        linewidths=2,
-        label=f'Detected Dark Matter (n={np.sum(high_dm_mask)})'
+background_mask = predictions == 0
+
+# Plot background galaxies first (smaller, lighter)
+if np.any(background_mask):
+    ax1.scatter(
+        df_sdss['ra'].values[background_mask],
+        df_sdss['dec'].values[background_mask],
+        c='lightgray',
+        s=30,
+        alpha=0.4,
+        edgecolors='none',
+        label=f'Background Galaxies (n={np.sum(background_mask)})'
     )
 
-# Add colorbar
-cbar = plt.colorbar(scatter, ax=ax, label='Dark Matter Probability', pad=0.02)
-cbar.set_label('Dark Matter Probability', fontsize=12, fontweight='bold')
-
-# Labels and title
-ax.set_xlabel('Right Ascension (degrees)', fontsize=14, fontweight='bold')
-ax.set_ylabel('Declination (degrees)', fontsize=14, fontweight='bold')
-ax.set_title('Dark Matter Detection in SDSS Data\nUsing Variational Quantum Classifier', 
-              fontsize=16, fontweight='bold', pad=20)
-
-# Add grid
-ax.grid(True, alpha=0.3, linestyle='--')
-
-# Add legend
+# Plot dark matter galaxies with high visibility
+scatter_dm = None
 if np.any(high_dm_mask):
-    ax.legend(loc='upper right', fontsize=11, framealpha=0.9)
+    # Use size proportional to probability for better visibility
+    sizes = 100 + prob_dark_matter[high_dm_mask] * 400
+    
+    scatter_dm = ax1.scatter(
+        df_sdss['ra'].values[high_dm_mask],
+        df_sdss['dec'].values[high_dm_mask],
+        c=prob_dark_matter[high_dm_mask],
+        s=sizes,
+        cmap='YlOrRd',  # Yellow-Orange-Red colormap for better visibility
+        alpha=0.9,
+        edgecolors='darkred',
+        linewidths=2,
+        vmin=0,
+        vmax=1,
+        label=f'Dark Matter Detected (n={np.sum(high_dm_mask)})'
+    )
+    
+    # Add bright red circles around high-confidence detections
+    high_conf_mask = prob_dark_matter[high_dm_mask] > 0.7
+    if np.any(high_conf_mask):
+        high_conf_ra = df_sdss['ra'].values[high_dm_mask][high_conf_mask]
+        high_conf_dec = df_sdss['dec'].values[high_dm_mask][high_conf_mask]
+        ax1.scatter(
+            high_conf_ra,
+            high_conf_dec,
+            s=300,
+            facecolors='none',
+            edgecolors='red',
+            linewidths=3,
+            label=f'High Confidence (P>0.7, n={np.sum(high_conf_mask)})'
+        )
 
-# Add text box with statistics
+# Add colorbar for dark matter probability
+if scatter_dm is not None:
+    cbar1 = plt.colorbar(scatter_dm, ax=ax1, label='Dark Matter Probability', pad=0.02)
+    cbar1.set_label('Dark Matter Probability', fontsize=12, fontweight='bold')
+
+# Labels and title for main plot
+ax1.set_xlabel('Right Ascension (degrees)', fontsize=14, fontweight='bold')
+ax1.set_ylabel('Declination (degrees)', fontsize=14, fontweight='bold')
+ax1.set_title('Dark Matter Detection in SDSS Data\nAll Galaxies', 
+              fontsize=16, fontweight='bold', pad=20)
+ax1.grid(True, alpha=0.3, linestyle='--')
+ax1.legend(loc='upper right', fontsize=10, framealpha=0.9)
+
+# Second plot: Dark matter only (zoomed/clustered view)
+ax2 = fig.add_subplot(gs[0, 1])
+
+if np.any(high_dm_mask):
+    # Create a density/heatmap of dark matter locations
+    # Create 2D histogram for density visualization
+    ra_dm = df_sdss['ra'].values[high_dm_mask]
+    dec_dm = df_sdss['dec'].values[high_dm_mask]
+    prob_dm = prob_dark_matter[high_dm_mask]
+    
+    # Create grid for density estimation
+    ra_range = [ra_dm.min() - 0.05, ra_dm.max() + 0.05]
+    dec_range = [dec_dm.min() - 0.05, dec_dm.max() + 0.05]
+    
+    # Create 2D histogram weighted by probability
+    H, xedges, yedges = np.histogram2d(
+        ra_dm, dec_dm,
+        bins=30,
+        range=[ra_range, dec_range],
+        weights=prob_dm
+    )
+    
+    # Plot density heatmap
+    extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+    im = ax2.imshow(
+        H.T, 
+        origin='lower', 
+        extent=extent,
+        cmap='hot',
+        interpolation='bilinear',
+        aspect='auto',
+        alpha=0.8
+    )
+    
+    # Overlay individual dark matter detections
+    scatter_dm2 = ax2.scatter(
+        ra_dm,
+        dec_dm,
+        c=prob_dm,
+        s=150,
+        cmap='YlOrRd',
+        alpha=0.9,
+        edgecolors='darkred',
+        linewidths=2,
+        vmin=0,
+        vmax=1
+    )
+    
+    # Add colorbar
+    cbar2 = plt.colorbar(scatter_dm2, ax=ax2, label='Dark Matter Probability', pad=0.02)
+    cbar2.set_label('Dark Matter Probability', fontsize=12, fontweight='bold')
+    
+    ax2.set_xlabel('Right Ascension (degrees)', fontsize=14, fontweight='bold')
+    ax2.set_ylabel('Declination (degrees)', fontsize=14, fontweight='bold')
+    ax2.set_title('Dark Matter Density Map\nDetected Regions Only', 
+                  fontsize=16, fontweight='bold', pad=20)
+    ax2.grid(True, alpha=0.3, linestyle='--', color='white')
+else:
+    ax2.text(0.5, 0.5, 'No Dark Matter Detected', 
+             transform=ax2.transAxes, ha='center', va='center',
+             fontsize=16, fontweight='bold')
+    ax2.set_title('Dark Matter Density Map', fontsize=16, fontweight='bold')
+
+# Add overall statistics box
 stats_text = f'Total Galaxies: {len(df_sdss)}\n'
 stats_text += f'Dark Matter Detections: {np.sum(predictions == 1)}\n'
 stats_text += f'Background Galaxies: {np.sum(predictions == 0)}\n'
-stats_text += f'Detection Rate: {100*np.sum(predictions == 1)/len(predictions):.1f}%'
+stats_text += f'Detection Rate: {100*np.sum(predictions == 1)/len(predictions):.1f}%\n'
+if np.any(high_dm_mask):
+    stats_text += f'Avg. Dark Matter Probability: {np.mean(prob_dark_matter[high_dm_mask]):.2f}'
 
-ax.text(0.02, 0.98, stats_text,
-        transform=ax.transAxes,
-        fontsize=10,
-        verticalalignment='top',
-        bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
+fig.text(0.02, 0.02, stats_text,
+         fontsize=11,
+         verticalalignment='bottom',
+         bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.9))
 
-plt.tight_layout()
+plt.subplots_adjust(left=0.05, right=0.98, top=0.95, bottom=0.08)
 
 # Save figure
 output_path = os.path.join(visualizations_dir, 'sdss_dark_matter_detection.png')
